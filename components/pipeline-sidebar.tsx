@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,6 +43,7 @@ import {
   CollapsibleTrigger,
   CollapsibleContent,
 } from "@/components/ui/collapsible";
+import { GoogleConnectBanner } from "@/components/google-connect-banner";
 import type { Application } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
@@ -86,7 +87,8 @@ type ApplicationListItem = {
 
 interface PipelineSidebarProps {
   applications: ApplicationListItem[];
-  user: { name?: string | null; email: string };
+  user: { name?: string | null; email: string; image?: string | null };
+  googleConnected: boolean;
 }
 
 type Filter = "active" | "all";
@@ -94,6 +96,7 @@ type Filter = "active" | "all";
 export function PipelineSidebar({
   applications,
   user,
+  googleConnected,
 }: PipelineSidebarProps) {
   const pathname = usePathname();
   const [filter, setFilter] = useState<Filter>("active");
@@ -230,6 +233,9 @@ export function PipelineSidebar({
         </div>
       </ScrollArea>
 
+      {/* Connect banner — only when Google isn't linked */}
+      {!googleConnected && <GoogleConnectBanner />}
+
       {/* Footer */}
       <SidebarUser user={user} />
     </div>
@@ -283,7 +289,7 @@ function NavButton({
 function SidebarUser({
   user,
 }: {
-  user: { name?: string | null; email: string };
+  user: { name?: string | null; email: string; image?: string | null };
 }) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
@@ -306,6 +312,7 @@ function SidebarUser({
         <DropdownMenuTrigger asChild>
           <button className="flex w-full items-center gap-2 rounded-md p-1.5 text-left transition-colors hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:outline-none">
             <Avatar size="sm">
+              {user.image && <AvatarImage src={user.image} alt={displayName} />}
               <AvatarFallback>{initial}</AvatarFallback>
             </Avatar>
             <div className="flex min-w-0 flex-1 flex-col leading-tight">
@@ -338,10 +345,7 @@ function SidebarUser({
                 </span>
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent className="min-w-40">
-                <DropdownMenuRadioGroup
-                  value={theme}
-                  onValueChange={setTheme}
-                >
+                <DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>
                   <DropdownMenuRadioItem value="light">
                     Light
                   </DropdownMenuRadioItem>
