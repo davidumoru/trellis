@@ -38,9 +38,10 @@ export interface Contact {
   _id: ObjectId;
   user_id: string;
   name: string;
-  company_id: ObjectId;
-  role_title: string;
+  company_id?: ObjectId;
+  role_title?: string;
   source: string;
+  email?: string;
   linkedin_url?: string;
   notes?: string;
   last_contact_at?: Date;
@@ -54,17 +55,21 @@ export interface Conversation {
   contact_id: ObjectId;
   application_id?: ObjectId;
   channel: "email" | "linkedin" | "phone" | "other";
+  source?: "gmail" | "manual" | "seed";
+  gmail_thread_id?: string;
   messages: Message[];
   last_message_at: Date;
   last_message_from: "me" | "them";
   embedding?: number[];
   created_at: Date;
+  updated_at?: Date;
 }
 
 export interface Message {
   from: "me" | "them";
   body: string;
   sent_at: Date;
+  gmail_message_id?: string;
 }
 
 export interface Artifact {
