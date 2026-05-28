@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getCollections } from "@/lib/db";
+import { DashboardShell } from "@/components/dashboard-shell";
 
 export default async function DashboardLayout({
   children,
@@ -16,9 +17,11 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
-  const { artifacts } = await getCollections();
+  const userId = session.user.id;
+  const { artifacts, applications } = await getCollections();
+
   const hasResume = await artifacts.findOne({
-    user_id: session.user.id,
+    user_id: userId,
     "meta.kind": "base_resume",
   });
 
@@ -26,5 +29,22 @@ export default async function DashboardLayout({
     redirect("/onboarding");
   }
 
-  return <>{children}</>;
+  const apps = await applications
+    .find({ user_id: userId })
+    .project({ role_title: 1, status: 1, jd_structured: 1 })
+    .sort({ created_at: -1 })
+    .toArray();
+
+  return (
+    <DashboardShell
+      applications={apps.map((a) => ({
+        id: a._id.toString(),
+        role_title: a.role_title,
+        status: a.status,
+        jd_structured: a.jd_structured,
+      }))}
+    >
+      {children}
+    </DashboardShell>
+  );
 }

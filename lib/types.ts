@@ -2,6 +2,7 @@ import { ObjectId } from "mongodb";
 
 export interface Application {
   _id: ObjectId;
+  user_id: string;
   company_id: ObjectId;
   role_title: string;
   status:
@@ -35,6 +36,7 @@ export interface Application {
 
 export interface Contact {
   _id: ObjectId;
+  user_id: string;
   name: string;
   company_id: ObjectId;
   role_title: string;
@@ -48,6 +50,7 @@ export interface Contact {
 
 export interface Conversation {
   _id: ObjectId;
+  user_id: string;
   contact_id: ObjectId;
   application_id?: ObjectId;
   channel: "email" | "linkedin" | "phone" | "other";
@@ -78,6 +81,7 @@ export interface Artifact {
 
 export interface Company {
   _id: ObjectId;
+  user_id: string;
   name: string;
   domain?: string;
   research_notes_md?: string;
