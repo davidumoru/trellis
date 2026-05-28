@@ -37,6 +37,10 @@ export default async function DashboardLayout({
 
   return (
     <DashboardShell
+      user={{
+        name: session.user.name,
+        email: session.user.email,
+      }}
       applications={apps.map((a) => ({
         id: a._id.toString(),
         role_title: a.role_title,

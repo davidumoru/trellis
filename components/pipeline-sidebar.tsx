@@ -1,25 +1,68 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PlusIcon } from "lucide-react";
+import { Kbd } from "@/components/ui/kbd";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+} from "@/components/ui/dropdown-menu";
+import { useTheme } from "next-themes";
+import {
+  PlusIcon,
+  SearchIcon,
+  LogOutIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  ChevronsUpDownIcon,
+  BookmarkIcon,
+  PencilLineIcon,
+  SendIcon,
+  UsersIcon,
+  TrophyIcon,
+  XIcon,
+  UndoIcon,
+  SunIcon,
+  Code2Icon,
+  ArrowUpRightIcon,
+} from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from "@/components/ui/collapsible";
 import type { Application } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { authClient } from "@/lib/auth-client";
 
-const STATUS_LABELS: Record<Application["status"], string> = {
-  bookmarked: "Bookmarked",
-  applying: "Applying",
-  applied: "Applied",
-  interviewing: "Interviewing",
-  offered: "Offered",
-  rejected: "Rejected",
-  withdrawn: "Withdrawn",
+type Status = Application["status"];
+
+const STATUS_META: Record<
+  Status,
+  { label: string; icon: React.ComponentType<{ className?: string }> }
+> = {
+  bookmarked: { label: "Bookmarked", icon: BookmarkIcon },
+  applying: { label: "Applying", icon: PencilLineIcon },
+  applied: { label: "Applied", icon: SendIcon },
+  interviewing: { label: "Interviewing", icon: UsersIcon },
+  offered: { label: "Offered", icon: TrophyIcon },
+  rejected: { label: "Rejected", icon: XIcon },
+  withdrawn: { label: "Withdrawn", icon: UndoIcon },
 };
 
-const STATUS_ORDER: Application["status"][] = [
+const STATUS_ORDER: Status[] = [
   "bookmarked",
   "applying",
   "applied",
@@ -29,77 +72,322 @@ const STATUS_ORDER: Application["status"][] = [
   "withdrawn",
 ];
 
+const ACTIVE_STATUSES = new Set<Status>([
+  "bookmarked",
+  "applying",
+  "applied",
+  "interviewing",
+  "offered",
+]);
+
 type ApplicationListItem = {
   id: string;
 } & Pick<Application, "role_title" | "status" | "jd_structured">;
 
 interface PipelineSidebarProps {
   applications: ApplicationListItem[];
+  user: { name?: string | null; email: string };
 }
 
-export function PipelineSidebar({ applications }: PipelineSidebarProps) {
+type Filter = "active" | "all";
+
+export function PipelineSidebar({
+  applications,
+  user,
+}: PipelineSidebarProps) {
   const pathname = usePathname();
+  const [filter, setFilter] = useState<Filter>("active");
+
+  const visible =
+    filter === "active"
+      ? applications.filter((a) => ACTIVE_STATUSES.has(a.status))
+      : applications;
 
   const grouped = STATUS_ORDER.map((status) => ({
     status,
-    label: STATUS_LABELS[status],
-    items: applications.filter((a) => a.status === status),
+    items: visible.filter((a) => a.status === status),
   })).filter((g) => g.items.length > 0);
+
+  const totalCount = applications.length;
+  const activeCount = applications.filter((a) =>
+    ACTIVE_STATUSES.has(a.status),
+  ).length;
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between px-3 py-2">
-        <h2 className="text-sm font-semibold">Pipeline</h2>
-        <Button asChild size="icon-xs" variant="ghost">
-          <Link href="/dashboard/new" aria-label="New application">
-            <PlusIcon />
-          </Link>
-        </Button>
+      {/* Header */}
+      <div className="flex flex-col gap-1 px-2 pt-3 pb-2">
+        <SidebarBrand />
+
+        <div className="px-1 pt-2">
+          <Button asChild className="h-8 w-full justify-start gap-2">
+            <Link href="/dashboard/new">
+              <PlusIcon className="size-3.5" />
+              New application
+            </Link>
+          </Button>
+        </div>
+
+        <div className="px-1 pt-1">
+          <NavButton icon={SearchIcon} label="Search" shortcut="⌘K" disabled />
+        </div>
       </div>
 
+      {/* Scrollable content */}
       <ScrollArea className="flex-1">
-        <div className="flex flex-col gap-4 px-1 pb-3">
+        <div className="flex w-full min-w-0 flex-col gap-3 overflow-hidden px-2 pb-3">
+          <div className="flex items-center justify-between px-2 pt-3">
+            <span className="text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
+              Pipeline
+            </span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 rounded-sm px-1 -mx-1 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  {filter === "active" ? "Active" : "All"}
+                  <ChevronDownIcon className="size-3" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-40">
+                <DropdownMenuRadioGroup
+                  value={filter}
+                  onValueChange={(v) => setFilter(v as Filter)}
+                >
+                  <DropdownMenuRadioItem value="active">
+                    Active
+                    <span className="ml-auto text-xs text-muted-foreground">
+                      {activeCount}
+                    </span>
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="all">
+                    All
+                    <span className="ml-auto text-xs text-muted-foreground">
+                      {totalCount}
+                    </span>
+                  </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
           {grouped.length === 0 ? (
-            <p className="px-2 py-8 text-center text-sm text-muted-foreground">
-              No applications yet
+            <p className="px-2 py-8 text-center text-xs text-muted-foreground">
+              {totalCount === 0
+                ? "No applications yet."
+                : "No active applications."}
             </p>
           ) : (
-            grouped.map((group) => (
-              <div key={group.status} className="flex flex-col gap-0.5">
-                <div className="flex items-center gap-2 px-2 py-1">
-                  <span className="text-xs font-medium text-muted-foreground">
-                    {group.label}
-                  </span>
-                  <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">
-                    {group.items.length}
-                  </Badge>
-                </div>
-                {group.items.map((app) => {
-                  const href = `/dashboard/${app.id}`;
-                  const isActive = pathname === href;
-                  return (
-                    <Link
-                      key={app.id}
-                      href={href}
-                      className={cn(
-                        "flex flex-col gap-0.5 rounded-md px-2 py-1.5 transition-colors",
-                        isActive ? "bg-muted" : "hover:bg-muted/50",
-                      )}
-                    >
-                      <span className="truncate text-sm font-medium">
-                        {app.role_title}
+            <div className="flex flex-col gap-1">
+              {grouped.map((group) => {
+                const meta = STATUS_META[group.status];
+                const Icon = meta.icon;
+                const defaultOpen = !(
+                  group.status === "rejected" || group.status === "withdrawn"
+                );
+                return (
+                  <Collapsible
+                    key={group.status}
+                    defaultOpen={defaultOpen}
+                    className="group/collapsible flex w-full min-w-0 flex-col gap-0.5"
+                  >
+                    <CollapsibleTrigger className="flex w-full min-w-0 items-center gap-1.5 rounded-md px-2 py-1 text-left transition-colors hover:bg-muted/40">
+                      <ChevronRightIcon className="size-3 shrink-0 text-muted-foreground/60 transition-transform duration-150 group-data-[state=open]/collapsible:rotate-90" />
+                      <Icon className="size-3 shrink-0 text-muted-foreground" />
+                      <span className="flex-1 truncate text-[11px] font-medium text-muted-foreground">
+                        {meta.label}
                       </span>
-                      <span className="truncate text-xs text-muted-foreground">
-                        {app.jd_structured?.company}
+                      <span className="text-[11px] tabular-nums text-muted-foreground/60">
+                        {group.items.length}
                       </span>
-                    </Link>
-                  );
-                })}
-              </div>
-            ))
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="flex flex-col gap-0.5 overflow-hidden data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0">
+                      {group.items.map((app) => {
+                        const href = `/dashboard/${app.id}`;
+                        const isActive = pathname === href;
+                        return (
+                          <Link
+                            key={app.id}
+                            href={href}
+                            className={cn(
+                              "flex min-w-0 items-center overflow-hidden rounded-md py-1.5 pr-2 pl-11 transition-colors",
+                              isActive ? "bg-muted" : "hover:bg-muted/60",
+                            )}
+                          >
+                            <span className="truncate text-[13px]">
+                              {app.role_title}
+                            </span>
+                          </Link>
+                        );
+                      })}
+                    </CollapsibleContent>
+                  </Collapsible>
+                );
+              })}
+            </div>
           )}
         </div>
       </ScrollArea>
+
+      {/* Footer */}
+      <SidebarUser user={user} />
+    </div>
+  );
+}
+
+function SidebarBrand() {
+  return (
+    <div className="flex items-center gap-2 px-2 py-1">
+      <div aria-hidden className="grid size-3.5 grid-cols-2 gap-px">
+        <div className="rounded-[1px] bg-primary" />
+        <div className="rounded-[1px] bg-primary/40" />
+        <div className="rounded-[1px] bg-primary/40" />
+        <div className="rounded-[1px] bg-primary" />
+      </div>
+      <span className="font-heading text-sm font-semibold tracking-tight">
+        Trellis
+      </span>
+    </div>
+  );
+}
+
+function NavButton({
+  icon: Icon,
+  label,
+  shortcut,
+  disabled,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  shortcut?: string;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      className={cn(
+        "group flex h-8 w-full items-center gap-2 rounded-md px-2 text-[13px] transition-colors",
+        "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+        "disabled:opacity-60 disabled:hover:bg-transparent disabled:hover:text-muted-foreground",
+      )}
+    >
+      <Icon className="size-3.5" />
+      <span className="flex-1 text-left">{label}</span>
+      {shortcut && <Kbd>{shortcut}</Kbd>}
+    </button>
+  );
+}
+
+function SidebarUser({
+  user,
+}: {
+  user: { name?: string | null; email: string };
+}) {
+  const router = useRouter();
+  const { theme, setTheme } = useTheme();
+
+  async function handleSignOut() {
+    await authClient.signOut();
+    router.push("/login");
+    router.refresh();
+  }
+
+  const initial = (user.name?.[0] ?? user.email[0] ?? "?").toUpperCase();
+  const displayName = user.name?.trim() || user.email;
+  const showEmail = Boolean(user.name?.trim()) && user.name !== user.email;
+  const themeLabel =
+    theme === "light" ? "Light" : theme === "system" ? "System" : "Dark";
+
+  return (
+    <div className="shrink-0 px-2 pt-2 pb-4">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="flex w-full items-center gap-2 rounded-md p-1.5 text-left transition-colors hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:outline-none">
+            <Avatar size="sm">
+              <AvatarFallback>{initial}</AvatarFallback>
+            </Avatar>
+            <div className="flex min-w-0 flex-1 flex-col leading-tight">
+              <span className="truncate text-[12px] font-medium">
+                {displayName}
+              </span>
+              {showEmail && (
+                <span className="truncate text-[11px] text-muted-foreground">
+                  {user.email}
+                </span>
+              )}
+            </div>
+            <ChevronsUpDownIcon className="size-3.5 shrink-0 text-muted-foreground" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="start"
+          side="top"
+          sideOffset={8}
+          className="w-72! p-0"
+        >
+          {/* Section: theme */}
+          <div className="p-1">
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger className="gap-2">
+                <SunIcon className="size-3.5 text-muted-foreground" />
+                <span className="flex-1">Theme</span>
+                <span className="text-xs text-muted-foreground">
+                  {themeLabel}
+                </span>
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="min-w-40">
+                <DropdownMenuRadioGroup
+                  value={theme}
+                  onValueChange={setTheme}
+                >
+                  <DropdownMenuRadioItem value="light">
+                    Light
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="dark">
+                    Dark
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="system">
+                    System
+                  </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          </div>
+
+          <DropdownMenuSeparator className="my-0" />
+
+          {/* Section: external links */}
+          <div className="p-1">
+            <DropdownMenuItem asChild>
+              <a
+                href="https://github.com/davidumoru/trellis"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="gap-2"
+              >
+                <Code2Icon className="size-3.5 text-muted-foreground" />
+                <span className="flex-1">Source on GitHub</span>
+                <ArrowUpRightIcon className="size-3 text-muted-foreground" />
+              </a>
+            </DropdownMenuItem>
+          </div>
+
+          <DropdownMenuSeparator className="my-0" />
+
+          {/* Section: sign out */}
+          <div className="p-1">
+            <DropdownMenuItem
+              onClick={handleSignOut}
+              className="gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
+            >
+              <LogOutIcon className="size-3.5" />
+              Sign out
+            </DropdownMenuItem>
+          </div>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }

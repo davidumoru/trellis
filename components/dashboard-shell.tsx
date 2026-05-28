@@ -20,11 +20,13 @@ type ApplicationListItem = {
 
 interface DashboardShellProps {
   applications: ApplicationListItem[];
+  user: { name?: string | null; email: string };
   children: React.ReactNode;
 }
 
 export function DashboardShell({
   applications,
+  user,
   children,
 }: DashboardShellProps) {
   const isMobile = useIsMobile();
@@ -37,7 +39,7 @@ export function DashboardShell({
       style={{ "--sidebar-width": "260px" } as React.CSSProperties}
     >
       <Sidebar collapsible="offcanvas">
-        <PipelineSidebar applications={applications} />
+        <PipelineSidebar applications={applications} user={user} />
         <SidebarResizer />
       </Sidebar>
       <SidebarInset
