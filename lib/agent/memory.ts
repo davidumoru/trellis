@@ -1,4 +1,5 @@
-import { generateText } from "ai";
+import { generateObject, generateText, streamText } from "ai";
+import { z } from "zod";
 import { ObjectId } from "mongodb";
 import { agentModel } from "@/lib/ai";
 import { getCollections } from "@/lib/db";
@@ -38,6 +39,60 @@ export async function runMemoryQuery({
   emit: Emit;
 }) {
   emit({ type: "plan", query });
+
+  // Step 0: Classify — does this actually need retrieval?
+  let needsRetrieval = true;
+  try {
+    const { object } = await generateObject({
+      model: agentModel,
+      schema: z.object({
+        needs_retrieval: z
+          .boolean()
+          .describe(
+            "True if answering requires searching the user's specific pipeline data. False for greetings, small talk, and generic job-search advice.",
+          ),
+      }),
+      prompt: `You're an assistant inside a job tracking app. Decide if the user's message requires searching their stored pipeline (their applications, recruiter conversations, tailored documents).
+
+TRUE when the message is a specific question about THEIR data:
+- "have I talked to anyone at Linear?"
+- "what role pays the most in my pipeline?"
+- "which applications mention React?"
+- "remind me what I said in my cover letter for Stripe"
+
+FALSE when it's:
+- Greeting / pleasantry: "hey", "hi", "thanks", "cool"
+- Small talk: "how are you", "what can you do"
+- Generic advice: "what should I look for in a job", "tips for interviews"
+- Ambiguous / unclear input
+
+User message: "${query}"`,
+    });
+    needsRetrieval = object.needs_retrieval;
+  } catch {
+    // If classification fails, default to retrieval (safe fallback)
+    needsRetrieval = true;
+  }
+
+  if (!needsRetrieval) {
+    try {
+      const { textStream } = streamText({
+        model: agentModel,
+        prompt: `You are Trellis, a concise assistant inside a job tracking app. The user just said:
+
+"${query}"
+
+Respond in 1-2 short sentences. If they're greeting you, greet back and offer to help with their pipeline. If they're asking what you can do, mention you can search across their applications, conversations, and documents. If they're asking for generic advice, give one helpful sentence. Do not invent any details about their specific pipeline.`,
+      });
+      for await (const chunk of textStream) {
+        emit({ type: "answer:chunk", text: chunk });
+      }
+      emit({ type: "answer:done" });
+    } catch (e) {
+      emit({ type: "error", message: (e as Error).message });
+    }
+    return;
+  }
 
   // Step 1: HyDE — generate a hypothetical answer to embed
   let hyde: string;
@@ -285,12 +340,10 @@ ${contextBlocks.join("\n\n")}
 Answer in 2-4 sentences. Use [1], [2] style citations inline. Don't list citations at the end.`;
 
   try {
-    const { textStream } = await import("ai").then((m) =>
-      m.streamText({
-        model: agentModel,
-        prompt: synthesisPrompt,
-      }),
-    );
+    const { textStream } = streamText({
+      model: agentModel,
+      prompt: synthesisPrompt,
+    });
     for await (const chunk of textStream) {
       emit({ type: "answer:chunk", text: chunk });
     }
