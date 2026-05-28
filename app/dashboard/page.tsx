@@ -1,5 +1,5 @@
-import { RecordDetail } from "@/components/record-detail";
+import { IntakeScreen } from "@/components/intake-screen";
 
 export default function DashboardPage() {
-  return <RecordDetail />;
+  return <IntakeScreen />;
 }
