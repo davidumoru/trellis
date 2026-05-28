@@ -1,32 +1,47 @@
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
-import { getCollections } from "@/lib/db";
+"use client";
 
-export default async function DashboardPage() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+import { useState } from "react";
+import {
+  SidebarProvider,
+  Sidebar,
+  SidebarInset,
+} from "@/components/ui/sidebar";
+import { PipelineSidebar } from "@/components/pipeline-sidebar";
+import { RecordDetail } from "@/components/record-detail";
+import { AgentThread } from "@/components/agent-thread";
+import { SidebarResizer } from "@/components/sidebar-resizer";
+import { CollapsedSidebarTrigger } from "@/components/collapsed-sidebar-trigger";
+import { MobileAgentSheet } from "@/components/mobile-agent-sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 
-  if (!session) {
-    redirect("/login");
-  }
-
-  const { artifacts } = await getCollections();
-  const hasResume = await artifacts.findOne({
-    user_id: session.user.id,
-    "meta.kind": "base_resume",
-  });
-
-  if (!hasResume) {
-    redirect("/onboarding");
-  }
+export default function DashboardPage() {
+  const [selectedId, setSelectedId] = useState<string>();
+  const isMobile = useIsMobile();
 
   return (
-    <div className="flex flex-1 items-center justify-center">
-      <p className="text-muted-foreground">
-        Welcome back, {session.user.name}
-      </p>
-    </div>
+    <SidebarProvider
+      style={{ "--sidebar-width": "260px" } as React.CSSProperties}
+    >
+      <Sidebar collapsible="offcanvas">
+        <PipelineSidebar
+          applications={[]}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+          onNewApplication={() => {}}
+        />
+        <SidebarResizer />
+      </Sidebar>
+      <SidebarInset
+        className={
+          isMobile
+            ? "relative"
+            : "relative grid grid-cols-[1fr_340px]"
+        }
+      >
+        <CollapsedSidebarTrigger />
+        <RecordDetail applicationId={selectedId} />
+        {isMobile ? <MobileAgentSheet /> : <AgentThread />}
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
