@@ -18,7 +18,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/components/theme-provider";
 import {
   SearchIcon,
   LogOutIcon,
@@ -131,9 +131,24 @@ export function PipelineSidebar({
         <SidebarBrand onOpenSearch={onOpenSearch} />
 
         <div className="flex flex-col px-1 pt-2">
-          <NavLink icon={HomeIcon} label="Home" href="/dashboard" pathname={pathname} />
-          <NavLink icon={InboxIcon} label="Inbox" href="/dashboard/inbox" pathname={pathname} />
-          <NavLink icon={CalendarIcon} label="Calendar" href="/dashboard/calendar" pathname={pathname} />
+          <NavLink
+            icon={HomeIcon}
+            label="Home"
+            href="/dashboard"
+            pathname={pathname}
+          />
+          <NavLink
+            icon={InboxIcon}
+            label="Inbox"
+            href="/dashboard/inbox"
+            pathname={pathname}
+          />
+          <NavLink
+            icon={CalendarIcon}
+            label="Calendar"
+            href="/dashboard/calendar"
+            pathname={pathname}
+          />
           <MoreNav pathname={pathname} />
         </div>
       </div>
@@ -266,37 +281,6 @@ function SidebarBrand({ onOpenSearch }: { onOpenSearch: () => void }) {
   );
 }
 
-function NavButton({
-  icon: Icon,
-  label,
-  shortcut,
-  disabled,
-  onClick,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  shortcut?: string;
-  disabled?: boolean;
-  onClick?: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className={cn(
-        "group flex h-8 w-full items-center gap-2 rounded-md px-2 text-[13px] transition-colors",
-        "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-        "disabled:opacity-60 disabled:hover:bg-transparent disabled:hover:text-muted-foreground",
-      )}
-    >
-      <Icon className="size-3.5" />
-      <span className="flex-1 text-left">{label}</span>
-      {shortcut && <Kbd>{shortcut}</Kbd>}
-    </button>
-  );
-}
-
 function NavLink({
   icon: Icon,
   label,
@@ -425,7 +409,12 @@ function SidebarUser({
                 </span>
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent className="min-w-40">
-                <DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>
+                <DropdownMenuRadioGroup
+                  value={theme}
+                  onValueChange={(v) =>
+                    setTheme(v as "light" | "dark" | "system")
+                  }
+                >
                   <DropdownMenuRadioItem value="light">
                     Light
                   </DropdownMenuRadioItem>

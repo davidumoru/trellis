@@ -1,4 +1,4 @@
-import { generateObject, generateText, streamText } from "ai";
+import { generateObject, streamText } from "ai";
 import { z } from "zod";
 import { ObjectId } from "mongodb";
 import { agentModel } from "@/lib/ai";
@@ -8,6 +8,22 @@ import { generateEmbedding } from "@/lib/agent/embeddings";
 const SEARCH_INDEX = "vector_index";
 const NUM_CANDIDATES = 50;
 const TOP_K_PER_COLLECTION = 4;
+const STREAM_CHUNK_DELAY_MS = 12;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+function artifactTypeLabel(type: string): string {
+  switch (type) {
+    case "resume_diff":
+      return "Tailored resume";
+    case "cover_letter":
+      return "Cover letter";
+    case "research_note":
+      return "Company research";
+    default:
+      return type;
+  }
+}
 
 export type Citation = {
   kind: "application" | "conversation" | "artifact";
@@ -21,6 +37,7 @@ export type Citation = {
 export type MemoryEvent =
   | { type: "plan"; query: string }
   | { type: "hyde"; preview: string }
+  | { type: "thought"; text: string }
   | { type: "search:done"; citations: Citation[] }
   | { type: "answer:chunk"; text: string }
   | { type: "answer:done" }
@@ -40,7 +57,6 @@ export async function runMemoryQuery({
 }) {
   emit({ type: "plan", query });
 
-  // Step 0: Classify — does this actually need retrieval?
   let needsRetrieval = true;
   try {
     const { object } = await generateObject({
@@ -70,7 +86,6 @@ User message: "${query}"`,
     });
     needsRetrieval = object.needs_retrieval;
   } catch {
-    // If classification fails, default to retrieval (safe fallback)
     needsRetrieval = true;
   }
 
@@ -86,6 +101,7 @@ Respond in 1-2 short sentences. If they're greeting you, greet back and offer to
       });
       for await (const chunk of textStream) {
         emit({ type: "answer:chunk", text: chunk });
+        await sleep(STREAM_CHUNK_DELAY_MS);
       }
       emit({ type: "answer:done" });
     } catch (e) {
@@ -94,26 +110,51 @@ Respond in 1-2 short sentences. If they're greeting you, greet back and offer to
     return;
   }
 
-  // Step 1: HyDE — generate a hypothetical answer to embed
-  let hyde: string;
+  let hyde = "";
+  const THOUGHT_MIN_INTERVAL_MS = 1000;
+  let lastThoughtAt = 0;
+  async function emitThought(text: string) {
+    const now = Date.now();
+    if (lastThoughtAt > 0) {
+      const wait = THOUGHT_MIN_INTERVAL_MS - (now - lastThoughtAt);
+      if (wait > 0) await sleep(wait);
+    }
+    emit({ type: "thought", text });
+    lastThoughtAt = Date.now();
+  }
   try {
-    const { text } = await generateText({
+    let pending = "";
+    const result = streamText({
       model: agentModel,
-      prompt: `You are an assistant rewriting a user's question into a hypothetical answer that would, if it existed, satisfy the question. This will be embedded and used to search the user's job pipeline (applications, conversations, documents).
+      prompt: `You are an assistant generating a hypothetical answer to a user's question. This will be embedded and used to search the user's job pipeline (applications, conversations, documents).
 
-Write a plausible, specific 2-4 sentence answer. Don't say "I don't know" — invent a confident-sounding answer. We use it for retrieval, not to show the user.
+Output 6 to 10 short observations, ONE PER LINE, no bullets or numbering, no preamble. Each line should be a specific, plausible detail that — if it existed — would help answer the question. Don't say "I don't know"; invent confident-sounding specifics. Keep each line under 12 words.
 
 Question: ${query}
 
-Hypothetical answer:`,
+Observations:`,
     });
-    hyde = text.trim();
+    for await (const chunk of result.textStream) {
+      hyde += chunk;
+      pending += chunk;
+      let nl: number;
+      while ((nl = pending.indexOf("\n")) !== -1) {
+        const line = pending
+          .slice(0, nl)
+          .replace(/^[-*•\d.)\s]+/, "")
+          .trim();
+        pending = pending.slice(nl + 1);
+        if (line) await emitThought(line);
+      }
+    }
+    const tail = pending.replace(/^[-*•\d.)\s]+/, "").trim();
+    if (tail) await emitThought(tail);
+    hyde = hyde.trim();
   } catch {
-    hyde = query; // fall back to raw query
+    hyde = query;
   }
   emit({ type: "hyde", preview: hyde.slice(0, 200) });
 
-  // Step 2: Embed HyDE
   let queryVector: number[];
   try {
     queryVector = await generateEmbedding(hyde);
@@ -122,7 +163,6 @@ Hypothetical answer:`,
     return;
   }
 
-  // Step 3: Vector search across three indexed collections, in parallel
   const { applications, conversations, artifacts, contacts } =
     await getCollections();
 
@@ -202,7 +242,6 @@ Hypothetical answer:`,
       .toArray(),
   ]);
 
-  // Resolve contact names for conversations
   const contactIds = Array.from(
     new Set(convResults.map((c) => c.contact_id?.toString()).filter(Boolean)),
   ).map((id) => new ObjectId(id as string));
@@ -216,7 +255,6 @@ Hypothetical answer:`,
     convContacts.map((c) => [c._id.toString(), c]),
   );
 
-  // Resolve application titles for context
   const appIds = new Set<string>();
   convResults.forEach((c) => c.application_id && appIds.add(c.application_id.toString()));
   artifactResults.forEach((a) => a.application_id && appIds.add(a.application_id.toString()));
@@ -231,7 +269,6 @@ Hypothetical answer:`,
     : [];
   const appById = new Map(relatedApps.map((a) => [a._id.toString(), a]));
 
-  // Build citations, sorted by score
   const citations: Citation[] = [
     ...appResults.map((a): Citation => ({
       kind: "application",
@@ -257,19 +294,11 @@ Hypothetical answer:`,
     }),
     ...artifactResults.map((a): Citation => {
       const app = a.application_id ? appById.get(a.application_id.toString()) : null;
-      const typeLabel =
-        a.type === "resume_diff"
-          ? "Tailored resume"
-          : a.type === "cover_letter"
-            ? "Cover letter"
-            : a.type === "research_note"
-              ? "Company research"
-              : a.type;
       return {
         kind: "artifact",
         id: a._id.toString(),
         application_id: a.application_id?.toString(),
-        title: typeLabel,
+        title: artifactTypeLabel(a.type),
         subtitle: app
           ? `${app.role_title} at ${app.jd_structured?.company}`
           : undefined,
@@ -285,7 +314,6 @@ Hypothetical answer:`,
 
   emit({ type: "search:done", citations });
 
-  // Step 4: Synthesize answer with citations
   const contextBlocks = await Promise.all([
     ...appResults.map(async (a) => {
       const full = await applications.findOne(
@@ -315,15 +343,7 @@ Hypothetical answer:`,
       const cite = citations.findIndex(
         (c) => c.kind === "artifact" && c.id === a._id.toString(),
       );
-      const typeLabel =
-        a.type === "resume_diff"
-          ? "Tailored resume"
-          : a.type === "cover_letter"
-            ? "Cover letter"
-            : a.type === "research_note"
-              ? "Company research"
-              : a.type;
-      return `[${cite + 1}] ${typeLabel}${app ? ` for ${app.role_title} at ${app.jd_structured?.company}` : ""}.\n${a.content_md.slice(0, 1200)}`;
+      return `[${cite + 1}] ${artifactTypeLabel(a.type)}${app ? ` for ${app.role_title} at ${app.jd_structured?.company}` : ""}.\n${a.content_md.slice(0, 1200)}`;
     }),
   ]);
 
@@ -346,6 +366,7 @@ Answer in 2-4 sentences. Use [1], [2] style citations inline. Don't list citatio
     });
     for await (const chunk of textStream) {
       emit({ type: "answer:chunk", text: chunk });
+      await sleep(STREAM_CHUNK_DELAY_MS);
     }
     emit({ type: "answer:done" });
   } catch (e) {

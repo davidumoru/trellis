@@ -73,7 +73,9 @@ export function DashboardShell({
       </Sidebar>
       <SidebarInset
         className={
-          isMobile ? "relative" : "relative grid grid-cols-[1fr_340px]"
+          isMobile
+            ? "relative h-svh overflow-hidden"
+            : "relative grid h-svh grid-cols-[1fr_340px] grid-rows-1 overflow-hidden"
         }
       >
         <CollapsedSidebarTrigger />
