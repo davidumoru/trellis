@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { OtpInput } from "@/components/otp-input";
+import { Logo } from "@/components/logo";
 import { MailIcon } from "@/lib/icons";
 
 type Step = "email" | "otp";
@@ -80,7 +81,7 @@ export default function LoginPage() {
       <div className="flex w-full max-w-xs flex-col items-center gap-8">
         {step === "email" ? (
           <>
-            <h1 className="text-lg font-semibold tracking-tight">Trellis</h1>
+            <Logo variant="full" wordmarkClassName="text-lg" markClassName="size-4" />
 
             <div className="flex flex-col items-center gap-1.5">
               <h2 className="text-base font-medium">What&apos;s your email address?</h2>

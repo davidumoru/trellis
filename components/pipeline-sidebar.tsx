@@ -53,6 +53,7 @@ import { SyncBanner } from "@/components/sync-banner";
 import type { Application } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
+import { Logo } from "@/components/logo";
 
 type Status = Application["status"];
 
@@ -260,15 +261,11 @@ export function PipelineSidebar({
 function SidebarBrand({ onOpenSearch }: { onOpenSearch: () => void }) {
   return (
     <div className="flex items-center gap-2 px-2 py-1">
-      <div aria-hidden className="grid size-3.5 grid-cols-2 gap-px">
-        <div className="rounded-[1px] bg-primary" />
-        <div className="rounded-[1px] bg-primary/40" />
-        <div className="rounded-[1px] bg-primary/40" />
-        <div className="rounded-[1px] bg-primary" />
-      </div>
-      <span className="font-heading flex-1 text-sm font-semibold tracking-tight">
-        Trellis
-      </span>
+      <Logo
+        className="flex-1"
+        markClassName="size-[15px]"
+        wordmarkClassName="text-[17px]"
+      />
       <button
         type="button"
         onClick={onOpenSearch}
