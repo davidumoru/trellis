@@ -10,12 +10,12 @@
   },
   "dependencies": {
     "@ai-sdk/gateway": "^3.0.120",
+    "@phosphor-icons/react": "^2.1.10",
     "ai": "^6.0.191",
     "better-auth": "^1.6.11",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
-    "lucide-react": "^1.16.0",
     "mongodb": "^7.2.0",
     "motion": "^12.40.0",
     "next": "16.2.6",

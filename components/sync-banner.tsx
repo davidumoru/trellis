@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { RefreshCwIcon, CheckIcon } from "lucide-react";
+import { RefreshCwIcon, CheckIcon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
 type Status = "idle" | "syncing" | "done" | "error";

@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { MailIcon, CalendarIcon, SparklesIcon } from "lucide-react";
+import { MailIcon, CalendarIcon, SparklesIcon } from "@/lib/icons";
 import { authClient } from "@/lib/auth-client";
 
 interface GoogleConnectModalProps {

@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { AgentThread } from "@/components/agent-thread";
-import { MessageSquareIcon } from "lucide-react";
+import { MessageSquareIcon } from "@/lib/icons";
 
 export function MobileAgentSheet() {
   const [open, setOpen] = useState(false);

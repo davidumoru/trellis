@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { UploadIcon, FileTextIcon, XIcon } from "lucide-react";
+import { UploadIcon, FileTextIcon, XIcon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
 type Step = "profile" | "resume";

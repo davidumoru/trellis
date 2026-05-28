@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CircleIcon } from "lucide-react";
+import { CircleIcon } from "@/lib/icons";
 import { GoogleConnectModal } from "@/components/google-connect-modal";
 
 export function GoogleConnectBanner() {

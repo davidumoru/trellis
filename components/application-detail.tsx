@@ -7,7 +7,7 @@ import {
   TabsTrigger,
   TabsContent,
 } from "@/components/ui/tabs";
-import { ArrowUpRightIcon } from "lucide-react";
+import { ArrowUpRightIcon } from "@/lib/icons";
 
 const STATUS_LABELS: Record<string, string> = {
   bookmarked: "Bookmarked",

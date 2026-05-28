@@ -6,7 +6,7 @@ import Link from "next/link";
 import { getCollections } from "@/lib/db";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { CalendarIcon, VideoIcon, MapPinIcon } from "lucide-react";
+import { CalendarIcon, VideoIcon, MapPinIcon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
 export default async function CalendarPage() {

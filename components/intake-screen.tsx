@@ -13,7 +13,7 @@ import {
   XCircleIcon,
   ArrowUpIcon,
   FileSearchIcon,
-} from "lucide-react";
+} from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import type { IntakeEvent, PlanStep } from "@/lib/agent/intake";
 

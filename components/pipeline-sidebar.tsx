@@ -42,7 +42,7 @@ import {
   Building2Icon,
   UserIcon,
   FileTextIcon,
-} from "lucide-react";
+} from "@/lib/icons";
 import {
   Collapsible,
   CollapsibleTrigger,

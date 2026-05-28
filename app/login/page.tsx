@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { OtpInput } from "@/components/otp-input";
-import { MailIcon } from "lucide-react";
+import { MailIcon } from "@/lib/icons";
 
 type Step = "email" | "otp";
 

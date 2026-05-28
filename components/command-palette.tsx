@@ -31,7 +31,7 @@ import {
   BriefcaseIcon,
   CornerDownLeftIcon,
   SparklesIcon,
-} from "lucide-react";
+} from "@/lib/icons";
 import type { Application } from "@/lib/types";
 
 type AppListItem = {

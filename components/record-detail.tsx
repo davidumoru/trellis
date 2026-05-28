@@ -7,7 +7,7 @@ import {
   EmptyTitle,
   EmptyDescription,
 } from "@/components/ui/empty";
-import { InboxIcon } from "lucide-react";
+import { InboxIcon } from "@/lib/icons";
 
 interface RecordDetailProps {
   applicationId?: string;

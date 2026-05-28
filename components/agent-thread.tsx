@@ -6,7 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
-import { ArrowUpIcon, SparklesIcon } from "lucide-react";
+import { ArrowUpIcon, SparklesIcon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import type { Citation, MemoryEvent } from "@/lib/agent/memory";
 
