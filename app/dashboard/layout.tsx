@@ -19,7 +19,7 @@ export default async function DashboardLayout({
   }
 
   const userId = session.user.id;
-  const { artifacts, applications } = await getCollections();
+  const { artifacts, applications, contacts, companies } = await getCollections();
 
   const hasResume = await artifacts.findOne({
     user_id: userId,
@@ -35,6 +35,21 @@ export default async function DashboardLayout({
     .project({ role_title: 1, status: 1, jd_structured: 1 })
     .sort({ created_at: -1 })
     .toArray();
+
+  const [allContacts, allCompanies] = await Promise.all([
+    contacts
+      .find({ user_id: userId })
+      .project({ name: 1, role_title: 1, email: 1, company_id: 1 })
+      .sort({ last_contact_at: -1, created_at: -1 })
+      .limit(50)
+      .toArray(),
+    companies
+      .find({ user_id: userId })
+      .project({ name: 1, domain: 1 })
+      .sort({ created_at: -1 })
+      .limit(50)
+      .toArray(),
+  ]);
 
   const db = await getDb();
   const userObjectId = ObjectId.isValid(userId)
@@ -83,6 +98,18 @@ export default async function DashboardLayout({
         role_title: a.role_title,
         status: a.status,
         jd_structured: a.jd_structured,
+      }))}
+      contacts={allContacts.map((c) => ({
+        id: c._id.toString(),
+        name: c.name,
+        role_title: c.role_title ?? null,
+        email: c.email ?? null,
+        company_id: c.company_id?.toString() ?? null,
+      }))}
+      companies={allCompanies.map((c) => ({
+        id: c._id.toString(),
+        name: c.name,
+        domain: c.domain ?? null,
       }))}
       googleConnected={googleConnected}
     >

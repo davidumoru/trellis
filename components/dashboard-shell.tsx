@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { useState } from "react";
 import {
   SidebarProvider,
   Sidebar,
@@ -12,6 +12,10 @@ import { SidebarResizer } from "@/components/sidebar-resizer";
 import { CollapsedSidebarTrigger } from "@/components/collapsed-sidebar-trigger";
 import { MobileAgentSheet } from "@/components/mobile-agent-sheet";
 import { GoogleConnectPopup } from "@/components/google-connect-popup";
+import {
+  CommandPalette,
+  useCommandPaletteShortcut,
+} from "@/components/command-palette";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Application } from "@/lib/types";
 
@@ -19,8 +23,24 @@ type ApplicationListItem = {
   id: string;
 } & Pick<Application, "role_title" | "status" | "jd_structured">;
 
+type ContactListItem = {
+  id: string;
+  name: string;
+  role_title: string | null;
+  email: string | null;
+  company_id: string | null;
+};
+
+type CompanyListItem = {
+  id: string;
+  name: string;
+  domain: string | null;
+};
+
 interface DashboardShellProps {
   applications: ApplicationListItem[];
+  contacts: ContactListItem[];
+  companies: CompanyListItem[];
   user: { name?: string | null; email: string; image?: string | null };
   googleConnected: boolean;
   children: React.ReactNode;
@@ -28,14 +48,15 @@ interface DashboardShellProps {
 
 export function DashboardShell({
   applications,
+  contacts,
+  companies,
   user,
   googleConnected,
   children,
 }: DashboardShellProps) {
   const isMobile = useIsMobile();
-  const pathname = usePathname();
-
-  const showAgent = pathname !== "/dashboard/new";
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  useCommandPaletteShortcut(setPaletteOpen);
 
   return (
     <SidebarProvider
@@ -46,23 +67,29 @@ export function DashboardShell({
           applications={applications}
           user={user}
           googleConnected={googleConnected}
+          onOpenSearch={() => setPaletteOpen(true)}
         />
         <SidebarResizer />
       </Sidebar>
       <SidebarInset
         className={
-          isMobile || !showAgent
-            ? "relative"
-            : "relative grid grid-cols-[1fr_340px]"
+          isMobile ? "relative" : "relative grid grid-cols-[1fr_340px]"
         }
       >
         <CollapsedSidebarTrigger />
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
           {children}
         </main>
-        {showAgent && (isMobile ? <MobileAgentSheet /> : <AgentThread />)}
+        {isMobile ? <MobileAgentSheet /> : <AgentThread />}
       </SidebarInset>
       <GoogleConnectPopup googleConnected={googleConnected} />
+      <CommandPalette
+        applications={applications}
+        contacts={contacts}
+        companies={companies}
+        open={paletteOpen}
+        onOpenChange={setPaletteOpen}
+      />
     </SidebarProvider>
   );
 }

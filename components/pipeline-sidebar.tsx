@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -21,7 +20,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useTheme } from "next-themes";
 import {
-  PlusIcon,
   SearchIcon,
   LogOutIcon,
   ChevronDownIcon,
@@ -37,6 +35,13 @@ import {
   SunIcon,
   Code2Icon,
   ArrowUpRightIcon,
+  HomeIcon,
+  InboxIcon,
+  CalendarIcon,
+  MoreHorizontalIcon,
+  Building2Icon,
+  UserIcon,
+  FileTextIcon,
 } from "lucide-react";
 import {
   Collapsible,
@@ -44,6 +49,7 @@ import {
   CollapsibleContent,
 } from "@/components/ui/collapsible";
 import { GoogleConnectBanner } from "@/components/google-connect-banner";
+import { GmailSyncBanner } from "@/components/gmail-sync-banner";
 import type { Application } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
@@ -89,6 +95,7 @@ interface PipelineSidebarProps {
   applications: ApplicationListItem[];
   user: { name?: string | null; email: string; image?: string | null };
   googleConnected: boolean;
+  onOpenSearch: () => void;
 }
 
 type Filter = "active" | "all";
@@ -97,6 +104,7 @@ export function PipelineSidebar({
   applications,
   user,
   googleConnected,
+  onOpenSearch,
 }: PipelineSidebarProps) {
   const pathname = usePathname();
   const [filter, setFilter] = useState<Filter>("active");
@@ -120,19 +128,13 @@ export function PipelineSidebar({
     <div className="flex h-full flex-col">
       {/* Header */}
       <div className="flex flex-col gap-1 px-2 pt-3 pb-2">
-        <SidebarBrand />
+        <SidebarBrand onOpenSearch={onOpenSearch} />
 
-        <div className="px-1 pt-2">
-          <Button asChild className="h-8 w-full justify-start gap-2">
-            <Link href="/dashboard/new">
-              <PlusIcon className="size-3.5" />
-              New application
-            </Link>
-          </Button>
-        </div>
-
-        <div className="px-1 pt-1">
-          <NavButton icon={SearchIcon} label="Search" shortcut="⌘K" disabled />
+        <div className="flex flex-col px-1 pt-2">
+          <NavLink icon={HomeIcon} label="Home" href="/dashboard" pathname={pathname} />
+          <NavLink icon={InboxIcon} label="Inbox" href="/dashboard/inbox" pathname={pathname} />
+          <NavLink icon={CalendarIcon} label="Calendar" href="/dashboard/calendar" pathname={pathname} />
+          <MoreNav pathname={pathname} />
         </div>
       </div>
 
@@ -233,16 +235,14 @@ export function PipelineSidebar({
         </div>
       </ScrollArea>
 
-      {/* Connect banner — only when Google isn't linked */}
-      {!googleConnected && <GoogleConnectBanner />}
+      {googleConnected ? <GmailSyncBanner /> : <GoogleConnectBanner />}
 
-      {/* Footer */}
       <SidebarUser user={user} />
     </div>
   );
 }
 
-function SidebarBrand() {
+function SidebarBrand({ onOpenSearch }: { onOpenSearch: () => void }) {
   return (
     <div className="flex items-center gap-2 px-2 py-1">
       <div aria-hidden className="grid size-3.5 grid-cols-2 gap-px">
@@ -251,9 +251,17 @@ function SidebarBrand() {
         <div className="rounded-[1px] bg-primary/40" />
         <div className="rounded-[1px] bg-primary" />
       </div>
-      <span className="font-heading text-sm font-semibold tracking-tight">
+      <span className="font-heading flex-1 text-sm font-semibold tracking-tight">
         Trellis
       </span>
+      <button
+        type="button"
+        onClick={onOpenSearch}
+        aria-label="Search"
+        className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+      >
+        <SearchIcon className="size-3.5" />
+      </button>
     </div>
   );
 }
@@ -263,16 +271,19 @@ function NavButton({
   label,
   shortcut,
   disabled,
+  onClick,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   shortcut?: string;
   disabled?: boolean;
+  onClick?: () => void;
 }) {
   return (
     <button
       type="button"
       disabled={disabled}
+      onClick={onClick}
       className={cn(
         "group flex h-8 w-full items-center gap-2 rounded-md px-2 text-[13px] transition-colors",
         "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
@@ -283,6 +294,75 @@ function NavButton({
       <span className="flex-1 text-left">{label}</span>
       {shortcut && <Kbd>{shortcut}</Kbd>}
     </button>
+  );
+}
+
+function NavLink({
+  icon: Icon,
+  label,
+  href,
+  pathname,
+  shortcut,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  href: string;
+  pathname: string;
+  shortcut?: string;
+}) {
+  const isActive = pathname === href;
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "group flex h-8 w-full items-center gap-2 rounded-md px-2 text-[13px] transition-colors",
+        isActive
+          ? "bg-muted text-foreground"
+          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+      )}
+    >
+      <Icon className="size-3.5" />
+      <span className="flex-1 text-left">{label}</span>
+      {shortcut && <Kbd>{shortcut}</Kbd>}
+    </Link>
+  );
+}
+
+function MoreNav({ pathname }: { pathname: string }) {
+  const items = [
+    { icon: Building2Icon, label: "Companies", href: "/dashboard/companies" },
+    { icon: UserIcon, label: "Contacts", href: "/dashboard/contacts" },
+    { icon: FileTextIcon, label: "Documents", href: "/dashboard/documents" },
+  ];
+  const isActive = items.some((i) => pathname === i.href);
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            "group flex h-8 w-full items-center gap-2 rounded-md px-2 text-[13px] transition-colors",
+            isActive
+              ? "bg-muted text-foreground"
+              : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+          )}
+        >
+          <MoreHorizontalIcon className="size-3.5" />
+          <span className="flex-1 text-left">More</span>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" side="right" className="min-w-44">
+        {items.map((item) => (
+          <DropdownMenuItem key={item.href} asChild>
+            <Link href={item.href} className="gap-2">
+              <item.icon className="size-3.5 text-muted-foreground" />
+              {item.label}
+            </Link>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

@@ -39,7 +39,7 @@ interface ApplicationDetailProps {
   hiringManager: {
     id: string;
     name: string;
-    role_title: string;
+    role_title?: string;
     source: string;
     linkedin_url?: string;
     last_contact_at: string | null;
@@ -49,7 +49,7 @@ interface ApplicationDetailProps {
     channel: "email" | "linkedin" | "phone" | "other";
     last_message_at: string;
     last_message_from: "me" | "them";
-    contact: { name: string; role_title: string } | null;
+    contact: { name: string; role_title?: string } | null;
     messages: { from: "me" | "them"; body: string; sent_at: string }[];
   }[];
   resumeDiff: string | null;
