@@ -2,16 +2,15 @@ import { betterAuth } from "better-auth";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
 import { emailOTP } from "better-auth/plugins";
 import { nextCookies } from "better-auth/next-js";
-import { MongoClient } from "mongodb";
 import { Resend } from "resend";
+import { mongoClient } from "./mongodb";
 
-const client = new MongoClient(process.env.MONGODB_URI!);
-const db = client.db("trellis");
+const db = mongoClient.db("trellis");
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const auth = betterAuth({
-  database: mongodbAdapter(db, { client }),
+  database: mongodbAdapter(db, { client: mongoClient }),
   socialProviders: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID!,
