@@ -68,8 +68,10 @@ export interface Artifact {
   _id: ObjectId;
   type: "resume_diff" | "cover_letter" | "research_note" | "note";
   application_id?: ObjectId;
+  user_id: string;
   content_md: string;
   version: number;
+  meta?: Record<string, unknown>;
   embedding?: number[];
   created_at: Date;
 }

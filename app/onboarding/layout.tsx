@@ -3,7 +3,11 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getCollections } from "@/lib/db";
 
-export default async function DashboardPage() {
+export default async function OnboardingLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -18,15 +22,9 @@ export default async function DashboardPage() {
     "meta.kind": "base_resume",
   });
 
-  if (!hasResume) {
-    redirect("/onboarding");
+  if (hasResume) {
+    redirect("/dashboard");
   }
 
-  return (
-    <div className="flex flex-1 items-center justify-center">
-      <p className="text-muted-foreground">
-        Welcome back, {session.user.name}
-      </p>
-    </div>
-  );
+  return <>{children}</>;
 }
