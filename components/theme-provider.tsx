@@ -18,15 +18,20 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-const STORAGE_KEY = "theme";
+const COOKIE_NAME = "theme";
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
-function readStored(): Theme {
-  if (typeof window === "undefined") return "dark";
-  const stored = window.localStorage.getItem(STORAGE_KEY);
-  if (stored === "light" || stored === "dark" || stored === "system") {
-    return stored;
-  }
+function readCookie(): Theme {
+  if (typeof document === "undefined") return "dark";
+  const match = document.cookie.match(/(?:^|;\s*)theme=([^;]+)/);
+  const value = match?.[1];
+  if (value === "light" || value === "dark" || value === "system") return value;
   return "dark";
+}
+
+function writeCookie(value: Theme) {
+  if (typeof document === "undefined") return;
+  document.cookie = `${COOKIE_NAME}=${value}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax`;
 }
 
 function getSystemDark(): boolean {
@@ -42,7 +47,7 @@ function applyClass(resolved: "light" | "dark") {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(readStored);
+  const [theme, setThemeState] = useState<Theme>(readCookie);
   const [systemDark, setSystemDark] = useState<boolean>(getSystemDark);
 
   const resolvedTheme: "light" | "dark" =
@@ -62,11 +67,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const setTheme = useCallback((next: Theme) => {
     setThemeState(next);
-    try {
-      window.localStorage.setItem(STORAGE_KEY, next);
-    } catch {
-      /* ignore */
-    }
+    writeCookie(next);
   }, []);
 
   return (
