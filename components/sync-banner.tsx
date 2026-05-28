@@ -7,24 +7,39 @@ import { cn } from "@/lib/utils";
 
 type Status = "idle" | "syncing" | "done" | "error";
 
-interface SyncResult {
-  scanned: number;
-  jobRelated: number;
-  newConversations: number;
-  updatedConversations: number;
-  newContacts: number;
+interface SyncResponse {
+  ok: true;
+  gmail:
+    | { error: string }
+    | {
+        scanned: number;
+        jobRelated: number;
+        newConversations: number;
+        updatedConversations: number;
+        newContacts: number;
+      };
+  calendar:
+    | { error: string }
+    | {
+        scanned: number;
+        filtered: number;
+        classified: number;
+        jobRelated: number;
+        newEvents: number;
+        updatedEvents: number;
+      };
 }
 
-export function GmailSyncBanner() {
+export function SyncBanner() {
   const router = useRouter();
   const [status, setStatus] = useState<Status>("idle");
-  const [result, setResult] = useState<SyncResult | null>(null);
-  const [error, setError] = useState<string>("");
+  const [result, setResult] = useState<SyncResponse | null>(null);
+  const [error, setError] = useState("");
 
   async function handleSync() {
     setStatus("syncing");
     setError("");
-    const res = await fetch("/api/sync/gmail", { method: "POST" });
+    const res = await fetch("/api/sync", { method: "POST" });
     const data = await res.json();
     if (!res.ok) {
       setStatus("error");
@@ -58,27 +73,40 @@ export function GmailSyncBanner() {
         )}
         <span className="flex-1 truncate">
           {status === "syncing"
-            ? "Syncing inbox…"
+            ? "Syncing…"
             : status === "done" && result
               ? syncSummary(result)
               : status === "error"
                 ? error || "Sync failed"
-                : "Sync inbox"}
+                : "Sync"}
         </span>
       </button>
     </div>
   );
 }
 
-function syncSummary(r: SyncResult): string {
-  const newCount = r.newConversations;
-  const updatedCount = r.updatedConversations;
-  if (newCount === 0 && updatedCount === 0) return "All caught up";
-  if (newCount > 0 && updatedCount === 0) {
-    return `${newCount} new conversation${newCount === 1 ? "" : "s"}`;
+function syncSummary(r: SyncResponse): string {
+  let newConv = 0;
+  let updatedConv = 0;
+  let newEvents = 0;
+  let updatedEvents = 0;
+
+  if (!("error" in r.gmail)) {
+    newConv = r.gmail.newConversations;
+    updatedConv = r.gmail.updatedConversations;
   }
-  if (newCount === 0 && updatedCount > 0) {
-    return `${updatedCount} updated`;
+  if (!("error" in r.calendar)) {
+    newEvents = r.calendar.newEvents;
+    updatedEvents = r.calendar.updatedEvents;
   }
-  return `${newCount} new · ${updatedCount} updated`;
+
+  const parts: string[] = [];
+  if (newConv > 0) parts.push(`${newConv} message${newConv === 1 ? "" : "s"}`);
+  if (newEvents > 0) parts.push(`${newEvents} event${newEvents === 1 ? "" : "s"}`);
+  if (updatedConv > 0 || updatedEvents > 0) {
+    parts.push(`${updatedConv + updatedEvents} updated`);
+  }
+
+  if (parts.length === 0) return "All caught up";
+  return parts.join(" · ");
 }

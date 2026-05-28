@@ -49,7 +49,7 @@ import {
   CollapsibleContent,
 } from "@/components/ui/collapsible";
 import { GoogleConnectBanner } from "@/components/google-connect-banner";
-import { GmailSyncBanner } from "@/components/gmail-sync-banner";
+import { SyncBanner } from "@/components/sync-banner";
 import type { Application } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
@@ -235,7 +235,7 @@ export function PipelineSidebar({
         </div>
       </ScrollArea>
 
-      {googleConnected ? <GmailSyncBanner /> : <GoogleConnectBanner />}
+      {googleConnected ? <SyncBanner /> : <GoogleConnectBanner />}
 
       <SidebarUser user={user} />
     </div>

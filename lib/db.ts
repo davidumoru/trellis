@@ -2,6 +2,7 @@ import clientPromise from "./mongodb";
 import type {
   Application,
   Artifact,
+  CalendarEvent,
   Company,
   Contact,
   Conversation,
@@ -22,5 +23,6 @@ export async function getCollections() {
     artifacts: db.collection<Artifact>("artifacts"),
     companies: db.collection<Company>("companies"),
     events: db.collection<Event>("events"),
+    calendarEvents: db.collection<CalendarEvent>("calendar_events"),
   };
 }

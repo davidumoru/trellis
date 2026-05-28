@@ -102,6 +102,35 @@ export interface Event {
   created_at: Date;
 }
 
+export interface CalendarEvent {
+  _id: ObjectId;
+  user_id: string;
+  google_event_id: string;
+  title: string;
+  description?: string;
+  location?: string;
+  hangout_link?: string;
+  start_at: Date;
+  end_at: Date;
+  is_all_day: boolean;
+  timezone?: string;
+  attendees: {
+    email: string;
+    name?: string;
+    response?: string;
+  }[];
+  organizer_email?: string;
+  application_id?: ObjectId;
+  is_interview?: boolean;
+  signals?: {
+    stage_transition?: Application["status"];
+  };
+  source: "google_calendar";
+  status: "confirmed" | "tentative" | "cancelled";
+  created_at: Date;
+  updated_at?: Date;
+}
+
 export interface TimelineEntry {
   stage: Application["status"];
   entered_at: Date;
