@@ -174,7 +174,7 @@ function isNoiseThread(t: Thread): boolean {
   return false;
 }
 
-function cleanBody(body: string): string {
+export function cleanBody(body: string): string {
   let s = body.replace(/​|‌|‍|﻿/g, "").replace(/\r\n/g, "\n");
 
   if (looksLikeHtml(s)) s = htmlToText(s);
