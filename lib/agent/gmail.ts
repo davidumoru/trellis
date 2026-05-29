@@ -53,6 +53,47 @@ export async function listRecentMessageIds(
   return (data.messages ?? []).map((m) => m.id);
 }
 
+export interface GmailThread {
+  id: string;
+  historyId?: string;
+  messages: GmailMessage[];
+}
+
+export async function listRecentThreadIds(
+  accessToken: string,
+  options: { query?: string; maxResults?: number } = {},
+): Promise<string[]> {
+  const query = options.query ?? "newer_than:30d category:primary";
+  const maxResults = options.maxResults ?? 200;
+  const url = `${GMAIL_API}/threads?q=${encodeURIComponent(query)}&maxResults=${maxResults}`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    throw new Error(
+      `Gmail threads list failed: ${res.status} ${await res.text()}`,
+    );
+  }
+  const data = (await res.json()) as { threads?: { id: string }[] };
+  return (data.threads ?? []).map((t) => t.id);
+}
+
+export async function fetchThread(
+  accessToken: string,
+  threadId: string,
+): Promise<GmailThread> {
+  const url = `${GMAIL_API}/threads/${threadId}?format=full`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    throw new Error(
+      `Gmail thread fetch failed: ${res.status} ${await res.text()}`,
+    );
+  }
+  return (await res.json()) as GmailThread;
+}
+
 export async function fetchMessage(
   accessToken: string,
   messageId: string,

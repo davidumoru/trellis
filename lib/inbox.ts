@@ -142,6 +142,9 @@ const NOISE_EMAIL_PATTERNS = [
   /^alerts?@/i,
   /^newsletter@/i,
   /^updates?@/i,
+  /@levels\.fyi$/i,
+  /@(?:startupschool|ycombinator)\.org$/i,
+  /@substack\.com$/i,
 ];
 
 const NOISE_NAME_PATTERNS = [
@@ -149,6 +152,9 @@ const NOISE_NAME_PATTERNS = [
   /job digest/i,
   /jobs? for you/i,
   /weekly digest/i,
+  /co-founder matching/i,
+  /co\s*founder matching/i,
+  /product update/i,
 ];
 
 const NOISE_SUBJECT_PATTERNS = [
@@ -156,6 +162,9 @@ const NOISE_SUBJECT_PATTERNS = [
   /\bnew jobs? for you\b/i,
   /\bjobs? matching\b/i,
   /\bjob alert\b/i,
+  /\bproduct update\b/i,
+  /\bco-?founder match/i,
+  /\bweekly (?:digest|update|newsletter)\b/i,
 ];
 
 function isNoiseThread(t: Thread): boolean {
@@ -169,6 +178,8 @@ function cleanBody(body: string): string {
   let s = body.replace(/​|‌|‍|﻿/g, "").replace(/\r\n/g, "\n");
 
   if (looksLikeHtml(s)) s = htmlToText(s);
+  s = stripCssLeak(s);
+  s = stripQuotedReply(s);
   s = s.replace(/https?:\/\/[^\s<>"']+/g, (url) => {
     if (url.length <= 80) return url;
     try {
@@ -181,6 +192,50 @@ function cleanBody(body: string): string {
   s = s.replace(/^[\s\-=_*]{6,}$/gm, "");
   s = s.replace(/\n{3,}/g, "\n\n");
   return s.trim();
+}
+
+function stripQuotedReply(s: string): string {
+  let result = s;
+
+  const onWroteMatch = result.match(/\nOn\s+[^\n]+wrote:\s*\n/);
+  if (onWroteMatch && onWroteMatch.index !== undefined) {
+    result = result.slice(0, onWroteMatch.index).trimEnd();
+  }
+
+  const fromBlockMatch = result.match(/\nFrom:\s+[^\n]+\n(Sent|Date):\s+/i);
+  if (fromBlockMatch && fromBlockMatch.index !== undefined) {
+    result = result.slice(0, fromBlockMatch.index).trimEnd();
+  }
+
+  result = result.replace(/\n_{10,}\s*\n[\s\S]*$/, "").trimEnd();
+
+  const lines = result.split("\n");
+  let cutoff = lines.length;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i].trim();
+    if (line === "" || line.startsWith(">")) {
+      cutoff = i;
+    } else {
+      break;
+    }
+  }
+  if (cutoff < lines.length) {
+    result = lines.slice(0, cutoff).join("\n").trimEnd();
+  }
+
+  return result;
+}
+
+function stripCssLeak(s: string): string {
+  let result = s.replace(
+    /@media\s*\([^)]*\)\s*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g,
+    "",
+  );
+  result = result.replace(
+    /(?:[.#][\w-]+(?:[\s.#:>+~][.#\w-]+)*\s*\{[^{}]*\}\s*){2,}/g,
+    "",
+  );
+  return result;
 }
 
 function looksLikeHtml(s: string): boolean {

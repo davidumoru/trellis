@@ -4,20 +4,22 @@ import { z } from "zod";
 import { agentModel } from "@/lib/ai";
 import { getCollections } from "@/lib/db";
 import {
-  fetchMessage,
+  fetchThread,
   getOwnEmail,
-  listRecentMessageIds,
+  listRecentThreadIds,
   parseMessage,
+  type GmailThread,
   type ParsedEmail,
 } from "@/lib/agent/gmail";
 import {
   conversationEmbeddingText,
   generateEmbedding,
 } from "@/lib/agent/embeddings";
+import type { Conversation, Message } from "@/lib/types";
 
 const GMAIL_QUERY = "newer_than:30d category:primary";
 
-const MAX_MESSAGES_PER_SYNC = 200;
+const MAX_THREADS_PER_SYNC = 200;
 
 const SYNC_CONCURRENCY = 5;
 
@@ -25,7 +27,7 @@ const classificationSchema = z.object({
   is_job_related: z
     .boolean()
     .describe(
-      "True if this email is about a job application, recruiting, or interview",
+      "True ONLY if this is direct, personal communication with the user about a specific job opportunity, application, interview, or hiring decision. Examples of TRUE: a recruiter reaching out about a specific role, an application confirmation, an interview invitation, an offer or rejection, a hiring manager scheduling a call. Examples of FALSE: newsletters or product updates (even if they mention jobs/hiring), digests, job alert summaries, mass marketing, co-founder matching platforms, networking platform notifications, generic industry news, any automated mass email even if from a job-adjacent domain.",
     ),
   company: z
     .string()
@@ -63,18 +65,20 @@ export async function syncGmail({
   };
 
   const ownEmail = await getOwnEmail(accessToken);
-  const messageIds = await listRecentMessageIds(accessToken, {
+  const threadIds = await listRecentThreadIds(accessToken, {
     query: GMAIL_QUERY,
-    maxResults: MAX_MESSAGES_PER_SYNC,
+    maxResults: MAX_THREADS_PER_SYNC,
   });
 
   const { applications, conversations, contacts, companies, gmailRejections } =
     await getCollections();
 
   const rejectedDocs = await gmailRejections
-    .find({ user_id: userId }, { projection: { gmail_message_id: 1 } })
+    .find({ user_id: userId }, { projection: { gmail_thread_id: 1 } })
     .toArray();
-  const rejectedIds = new Set(rejectedDocs.map((r) => r.gmail_message_id));
+  const rejectedThreadIds = new Set(
+    rejectedDocs.map((r) => r.gmail_thread_id).filter(Boolean),
+  );
 
   const userApps = (await applications
     .find({ user_id: userId })
@@ -87,230 +91,264 @@ export async function syncGmail({
 
   const userCompanies = await companies.find({ user_id: userId }).toArray();
 
-  const threadLocks = new Map<string, Promise<unknown>>();
-
-  async function withThreadLock<T>(
-    threadId: string,
-    fn: () => Promise<T>,
-  ): Promise<T> {
-    const prev = threadLocks.get(threadId) ?? Promise.resolve();
-    const task = prev.then(fn);
-    threadLocks.set(
-      threadId,
-      task.catch(() => undefined),
-    );
-    try {
-      return await task;
-    } finally {
-      if (threadLocks.get(threadId)?.then) {
-        const cur = threadLocks.get(threadId);
-        await cur;
-        if (threadLocks.get(threadId) === cur) {
-          threadLocks.delete(threadId);
-        }
-      }
-    }
-  }
-
-  async function processMessage(messageId: string): Promise<void> {
+  async function processThread(threadId: string): Promise<void> {
     result.scanned++;
 
-    if (rejectedIds.has(messageId)) return;
+    const existingConv = await conversations.findOne({
+      user_id: userId,
+      gmail_thread_id: threadId,
+    });
 
-    let parsed: ParsedEmail | null = null;
+    if (!existingConv && rejectedThreadIds.has(threadId)) return;
+
+    let thread: GmailThread;
     try {
-      const msg = await fetchMessage(accessToken, messageId);
-      parsed = parseMessage(msg, ownEmail);
+      thread = await fetchThread(accessToken, threadId);
     } catch {
       return;
     }
-    if (!parsed) return;
-    const p = parsed;
+    if (!thread.messages || thread.messages.length === 0) return;
 
-    await withThreadLock(p.threadId, async () => {
-      const existingConv = await conversations.findOne({
-        user_id: userId,
-        gmail_thread_id: p.threadId,
-      });
+    const parsedMessages = thread.messages
+      .map((m) => parseMessage(m, ownEmail))
+      .filter((p): p is ParsedEmail => p !== null);
+    if (parsedMessages.length === 0) return;
+    parsedMessages.sort((a, b) => a.sentAt.getTime() - b.sentAt.getTime());
 
-      if (
-        existingConv?.messages.some(
-          (m) => m.gmail_message_id === p.messageId,
-        )
-      ) {
-        await conversations.updateOne(
-          {
-            _id: existingConv._id,
-            "messages.gmail_message_id": p.messageId,
-          },
-          { $set: { "messages.$.gmail_labels": p.labelIds } },
-        );
-        return;
-      }
+    const representative = parsedMessages.find((p) => !p.isFromMe);
 
-      let classification: z.infer<typeof classificationSchema>;
-      try {
-        const { object } = await generateObject({
-          model: agentModel,
-          schema: classificationSchema,
-          prompt: `Classify this email.
+    if (existingConv) {
+      const ref = representative ?? parsedMessages[0];
+      await ingestIntoExisting(existingConv, parsedMessages, ref);
+      return;
+    }
 
-From: ${p.fromName} <${p.fromEmail}>
-Subject: ${p.subject}
+    if (!representative) return;
+
+    let classification: z.infer<typeof classificationSchema>;
+    try {
+      const { object } = await generateObject({
+        model: agentModel,
+        schema: classificationSchema,
+        prompt: `Classify this email.
+
+From: ${representative.fromName} <${representative.fromEmail}>
+Subject: ${representative.subject}
 
 Body (first 2000 chars):
-${p.body.slice(0, 2000)}`,
-        });
-        classification = object;
-      } catch {
-        return;
-      }
+${representative.body.slice(0, 2000)}`,
+      });
+      classification = object;
+    } catch {
+      return;
+    }
 
-      if (!classification.is_job_related) {
-        try {
-          await gmailRejections.insertOne({
-            _id: new ObjectId(),
-            user_id: userId,
-            gmail_message_id: p.messageId,
-            rejected_at: new Date(),
-          });
-          rejectedIds.add(p.messageId);
-        } catch {
-          // ignore duplicate-key on race
-        }
-        return;
-      }
-      result.jobRelated++;
-
-      const matchedApp = matchApplication(
-        classification.company,
-        userApps,
-        userCompanies,
-        p.fromEmail,
-      );
-
-      const contactName = p.fromName || extractNameFromEmail(p.fromEmail);
-      const contactKey = p.isFromMe ? null : p.fromEmail.toLowerCase();
-
-      let contactId: ObjectId | null = null;
-      if (contactKey) {
-        const existingContact = await contacts.findOne({
+    if (!classification.is_job_related) {
+      try {
+        await gmailRejections.insertOne({
+          _id: new ObjectId(),
           user_id: userId,
-          email: contactKey,
+          gmail_thread_id: threadId,
+          rejected_at: new Date(),
         });
-        if (existingContact) {
-          contactId = existingContact._id;
-          await contacts.updateOne(
-            { _id: contactId },
-            {
-              $set: {
-                last_contact_at: p.sentAt,
-                ...(classification.sender_role && !existingContact.role_title
-                  ? { role_title: classification.sender_role }
-                  : {}),
-              },
-            },
-          );
-        } else {
-          contactId = new ObjectId();
-          const matchedCompanyId = await ensureCompanyId(
-            userId,
-            classification.company,
-            companies,
-          );
-          await contacts.insertOne({
-            _id: contactId,
-            user_id: userId,
-            name: contactName,
-            email: contactKey,
-            source: "gmail",
-            role_title: classification.sender_role ?? undefined,
-            company_id: matchedCompanyId ?? undefined,
-            last_contact_at: p.sentAt,
-            created_at: new Date(),
-          });
-          result.newContacts++;
-        }
+        rejectedThreadIds.add(threadId);
+      } catch {
+        // ignore duplicate-key on race
       }
+      return;
+    }
+    result.jobRelated++;
 
-      const newMessage = {
-        from: (p.isFromMe ? "me" : "them") as "me" | "them",
+    await createNewConversation(
+      threadId,
+      parsedMessages,
+      representative,
+      classification,
+    );
+  }
+
+  async function ingestIntoExisting(
+    existingConv: Conversation,
+    parsedMessages: ParsedEmail[],
+    representative: ParsedEmail,
+  ): Promise<void> {
+    const existingMessageIds = new Set(
+      existingConv.messages.map((m) => m.gmail_message_id),
+    );
+
+    const newMessageDocs: Message[] = [];
+    for (const p of parsedMessages) {
+      if (existingMessageIds.has(p.messageId)) continue;
+      newMessageDocs.push({
+        from: p.isFromMe ? "me" : "them",
         body: p.body.slice(0, 8000),
         sent_at: p.sentAt,
         gmail_message_id: p.messageId,
         gmail_labels: p.labelIds,
-      };
+      });
+    }
 
-      const cleanSubject = p.subject.replace(/^(re|fwd|fw):\s*/i, "").trim();
-
-      if (existingConv) {
-        const updatedMessages = [...existingConv.messages, newMessage].sort(
-          (a, b) => a.sent_at.getTime() - b.sent_at.getTime(),
-        );
-        const lastMessage = updatedMessages[updatedMessages.length - 1];
-        const embedding = await safeEmbedding(
-          conversationEmbeddingText(
-            { ...existingConv, messages: updatedMessages },
-            contactName,
-          ),
-        );
-        await conversations.updateOne(
-          { _id: existingConv._id },
-          {
-            $set: {
-              messages: updatedMessages,
-              last_message_at: lastMessage.sent_at,
-              last_message_from: lastMessage.from,
-              embedding,
-              updated_at: new Date(),
-              ...(cleanSubject && !existingConv.subject
-                ? { subject: cleanSubject }
-                : {}),
-            },
-          },
-        );
-        result.updatedConversations++;
-      } else {
-        if (!contactId) return;
-        const convDoc = {
-          _id: new ObjectId(),
-          user_id: userId,
-          contact_id: contactId,
-          application_id: matchedApp?._id,
-          channel: "email" as const,
-          source: "gmail" as const,
-          gmail_thread_id: p.threadId,
-          subject: cleanSubject || undefined,
-          messages: [newMessage],
-          last_message_at: p.sentAt,
-          last_message_from: newMessage.from,
-          created_at: new Date(),
-        };
-        const embedding = await safeEmbedding(
-          conversationEmbeddingText(convDoc, contactName),
-        );
-        await conversations.insertOne({ ...convDoc, embedding });
-        result.newConversations++;
-      }
+    const updatedExisting = existingConv.messages.map((m) => {
+      const fresh = parsedMessages.find(
+        (p) => p.messageId === m.gmail_message_id,
+      );
+      return fresh ? { ...m, gmail_labels: fresh.labelIds } : m;
     });
+
+    const allMessages = [...updatedExisting, ...newMessageDocs].sort(
+      (a, b) => a.sent_at.getTime() - b.sent_at.getTime(),
+    );
+    const lastMessage = allMessages[allMessages.length - 1];
+
+    const contactName =
+      representative.fromName || extractNameFromEmail(representative.fromEmail);
+
+    const embedding = await safeEmbedding(
+      conversationEmbeddingText(
+        { ...existingConv, messages: allMessages },
+        contactName,
+      ),
+    );
+
+    const cleanSubject = representative.subject
+      .replace(/^(re|fwd|fw):\s*/i, "")
+      .trim();
+
+    await conversations.updateOne(
+      { _id: existingConv._id },
+      {
+        $set: {
+          messages: allMessages,
+          last_message_at: lastMessage.sent_at,
+          last_message_from: lastMessage.from,
+          embedding,
+          updated_at: new Date(),
+          ...(cleanSubject && !existingConv.subject
+            ? { subject: cleanSubject }
+            : {}),
+        },
+      },
+    );
+
+    if (newMessageDocs.length > 0) {
+      result.updatedConversations++;
+    }
+
+    if (existingConv.gmail_thread_id) {
+      await gmailRejections
+        .deleteOne({
+          user_id: userId,
+          gmail_thread_id: existingConv.gmail_thread_id,
+        })
+        .catch(() => undefined);
+      rejectedThreadIds.delete(existingConv.gmail_thread_id);
+    }
   }
 
-  const queue = [...messageIds];
+  async function createNewConversation(
+    threadId: string,
+    parsedMessages: ParsedEmail[],
+    representative: ParsedEmail,
+    classification: z.infer<typeof classificationSchema>,
+  ): Promise<void> {
+    const matchedApp = matchApplication(
+      classification.company,
+      userApps,
+      userCompanies,
+      representative.fromEmail,
+    );
+
+    const contactName =
+      representative.fromName || extractNameFromEmail(representative.fromEmail);
+    const contactKey = representative.fromEmail.toLowerCase();
+
+    let contactId: ObjectId;
+    const existingContact = await contacts.findOne({
+      user_id: userId,
+      email: contactKey,
+    });
+    if (existingContact) {
+      contactId = existingContact._id;
+      await contacts.updateOne(
+        { _id: contactId },
+        {
+          $set: {
+            last_contact_at: representative.sentAt,
+            ...(classification.sender_role && !existingContact.role_title
+              ? { role_title: classification.sender_role }
+              : {}),
+          },
+        },
+      );
+    } else {
+      contactId = new ObjectId();
+      const matchedCompanyId = await ensureCompanyId(
+        userId,
+        classification.company,
+        companies,
+      );
+      await contacts.insertOne({
+        _id: contactId,
+        user_id: userId,
+        name: contactName,
+        email: contactKey,
+        source: "gmail",
+        role_title: classification.sender_role ?? undefined,
+        company_id: matchedCompanyId ?? undefined,
+        last_contact_at: representative.sentAt,
+        created_at: new Date(),
+      });
+      result.newContacts++;
+    }
+
+    const messageDocs: Message[] = parsedMessages.map((p) => ({
+      from: p.isFromMe ? "me" : "them",
+      body: p.body.slice(0, 8000),
+      sent_at: p.sentAt,
+      gmail_message_id: p.messageId,
+      gmail_labels: p.labelIds,
+    }));
+    const lastMessage = messageDocs[messageDocs.length - 1];
+
+    const cleanSubject = representative.subject
+      .replace(/^(re|fwd|fw):\s*/i, "")
+      .trim();
+
+    const convDoc = {
+      _id: new ObjectId(),
+      user_id: userId,
+      contact_id: contactId,
+      application_id: matchedApp?._id,
+      channel: "email" as const,
+      source: "gmail" as const,
+      gmail_thread_id: threadId,
+      subject: cleanSubject || undefined,
+      messages: messageDocs,
+      last_message_at: lastMessage.sent_at,
+      last_message_from: lastMessage.from,
+      created_at: new Date(),
+    };
+    const embedding = await safeEmbedding(
+      conversationEmbeddingText(convDoc, contactName),
+    );
+    await conversations.insertOne({ ...convDoc, embedding });
+    result.newConversations++;
+  }
+
+  const queue = [...threadIds];
   async function worker(): Promise<void> {
     while (queue.length > 0) {
       const id = queue.shift();
       if (!id) return;
       try {
-        await processMessage(id);
+        await processThread(id);
       } catch {
-        // swallow; next message
+        // swallow; next thread
       }
     }
   }
 
-  await Promise.all(
-    Array.from({ length: SYNC_CONCURRENCY }, () => worker()),
-  );
+  await Promise.all(Array.from({ length: SYNC_CONCURRENCY }, () => worker()));
 
   return result;
 }

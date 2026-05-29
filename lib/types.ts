@@ -107,7 +107,7 @@ export interface Event {
 export interface GmailRejection {
   _id: ObjectId;
   user_id: string;
-  gmail_message_id: string;
+  gmail_thread_id: string;
   rejected_at: Date;
 }
 
