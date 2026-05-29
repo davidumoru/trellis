@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { fetchThreads } from "@/lib/inbox";
-import { InboxShell } from "@/components/inbox-shell";
+import { InboxShell } from "@/components/inbox/inbox-shell";
 
 export default async function InboxLayout({
   children,

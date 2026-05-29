@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { redirect, notFound } from "next/navigation";
 import { ObjectId } from "mongodb";
 import { getCollections } from "@/lib/db";
-import { ApplicationDetail } from "@/components/application-detail";
+import { ApplicationDetail } from "@/components/pipeline/application-detail";
 
 export default async function ApplicationDetailPage({
   params,

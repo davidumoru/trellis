@@ -3,8 +3,8 @@ import Image from "next/image";
 import { ArrowRight as ArrowRightIcon } from "@phosphor-icons/react/dist/ssr";
 import { auth } from "@/lib/auth";
 import { headers, cookies } from "next/headers";
-import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
+import { SiteHeader } from "@/components/site/site-header";
+import { SiteFooter } from "@/components/site/site-footer";
 
 export default async function Home() {
   const [session, cookieStore] = await Promise.all([

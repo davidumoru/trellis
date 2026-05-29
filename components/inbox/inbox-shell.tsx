@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { InboxList } from "@/components/inbox-list";
+import { InboxList } from "@/components/inbox/inbox-list";
 import { cn } from "@/lib/utils";
 import type { Thread } from "@/lib/inbox";
 

@@ -6,7 +6,7 @@ import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { OtpInput } from "@/components/otp-input";
+import { OtpInput } from "@/components/auth/otp-input";
 import { Logo } from "@/components/logo";
 import { MailIcon } from "@/lib/icons";
 

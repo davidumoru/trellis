@@ -7,16 +7,16 @@ import {
   Sidebar,
   SidebarInset,
 } from "@/components/ui/sidebar";
-import { PipelineSidebar } from "@/components/pipeline-sidebar";
-import { AgentThread } from "@/components/agent-thread";
-import { SidebarResizer } from "@/components/sidebar-resizer";
-import { CollapsedSidebarTrigger } from "@/components/collapsed-sidebar-trigger";
-import { MobileAgentSheet } from "@/components/mobile-agent-sheet";
-import { GoogleConnectPopup } from "@/components/google-connect-popup";
+import { PipelineSidebar } from "@/components/pipeline/pipeline-sidebar";
+import { AgentThread } from "@/components/agent/agent-thread";
+import { SidebarResizer } from "@/components/dashboard/sidebar-resizer";
+import { CollapsedSidebarTrigger } from "@/components/dashboard/collapsed-sidebar-trigger";
+import { MobileAgentSheet } from "@/components/agent/mobile-agent-sheet";
+import { GoogleConnectPopup } from "@/components/google/google-connect-popup";
 import {
   CommandPalette,
   useCommandPaletteShortcut,
-} from "@/components/command-palette";
+} from "@/components/dashboard/command-palette";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Application } from "@/lib/types";
 

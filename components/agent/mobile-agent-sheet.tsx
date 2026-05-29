@@ -8,7 +8,7 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { AgentThread } from "@/components/agent-thread";
+import { AgentThread } from "@/components/agent/agent-thread";
 import { MessageSquareIcon } from "@/lib/icons";
 
 export function MobileAgentSheet() {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { GoogleConnectModal } from "@/components/google-connect-modal";
+import { GoogleConnectModal } from "@/components/google/google-connect-modal";
 
 const DISMISSED_KEY = "trellis-google-popup-dismissed";
 

@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ThreadMoreMenu } from "@/components/thread-more-menu";
+import { ThreadMoreMenu } from "@/components/inbox/thread-more-menu";
 import { MessageBody } from "@/components/message-body";
 import { auth } from "@/lib/auth";
 import { fetchThread } from "@/lib/inbox";

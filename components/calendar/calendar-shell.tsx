@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { CalendarList } from "@/components/calendar-list";
+import { CalendarList } from "@/components/calendar/calendar-list";
 import { cn } from "@/lib/utils";
 import type { Event } from "@/lib/calendar";
 

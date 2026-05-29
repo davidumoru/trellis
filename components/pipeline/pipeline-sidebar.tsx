@@ -51,13 +51,13 @@ import {
   CollapsibleTrigger,
   CollapsibleContent,
 } from "@/components/ui/collapsible";
-import { GoogleConnectBanner } from "@/components/google-connect-banner";
-import { SyncBanner } from "@/components/sync-banner";
+import { GoogleConnectBanner } from "@/components/google/google-connect-banner";
+import { SyncBanner } from "@/components/dashboard/sync-banner";
 import type { Application } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
 import { Logo } from "@/components/logo";
-import { SettingsSidebar } from "@/components/settings-sidebar";
+import { SettingsSidebar } from "@/components/dashboard/settings-sidebar";
 
 type Status = Application["status"];
 

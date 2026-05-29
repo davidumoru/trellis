@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { CircleIcon } from "@/lib/icons";
-import { GoogleConnectModal } from "@/components/google-connect-modal";
+import { GoogleConnectModal } from "@/components/google/google-connect-modal";
 
 export function GoogleConnectBanner() {
   const [open, setOpen] = useState(false);
