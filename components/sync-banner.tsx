@@ -52,34 +52,37 @@ export function SyncBanner() {
     window.setTimeout(() => setStatus("idle"), 4000);
   }
 
+  const label =
+    status === "syncing"
+      ? "Syncing…"
+      : status === "done" && result
+        ? syncSummary(result)
+        : status === "error"
+          ? error || "Sync failed"
+          : "Sync inbox & calendar";
+
   return (
-    <div className="shrink-0 px-2 pt-1 pb-1">
+    <div className="shrink-0 px-2 pt-1 pb-2">
       <button
         type="button"
         onClick={handleSync}
         disabled={status === "syncing"}
         className={cn(
-          "group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors",
-          "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-          "disabled:cursor-wait disabled:hover:bg-transparent",
+          "group/sync flex w-full items-center justify-center gap-1.5 rounded-md border border-border px-2 py-1.5 text-[11px] transition-colors",
+          status === "error"
+            ? "text-destructive/80 hover:bg-destructive/10 hover:text-destructive"
+            : "text-muted-foreground/70 hover:bg-muted/60 hover:text-foreground",
+          "disabled:cursor-wait",
         )}
       >
         {status === "syncing" ? (
-          <RefreshCwIcon className="size-3 shrink-0 animate-spin text-muted-foreground" />
+          <RefreshCwIcon className="size-2.5 shrink-0 animate-spin" />
         ) : status === "done" ? (
-          <CheckIcon className="size-3 shrink-0 text-foreground" />
+          <CheckIcon className="size-2.5 shrink-0" />
         ) : (
-          <RefreshCwIcon className="size-3 shrink-0 text-muted-foreground/60 transition-colors group-hover:text-foreground" />
+          <RefreshCwIcon className="size-2.5 shrink-0 transition-transform duration-300 group-hover/sync:rotate-180" />
         )}
-        <span className="flex-1 truncate">
-          {status === "syncing"
-            ? "Syncing…"
-            : status === "done" && result
-              ? syncSummary(result)
-              : status === "error"
-                ? error || "Sync failed"
-                : "Sync"}
-        </span>
+        <span className="truncate">{label}</span>
       </button>
     </div>
   );

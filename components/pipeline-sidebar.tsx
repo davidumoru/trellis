@@ -190,7 +190,7 @@ function PipelineMainView({
       </div>
 
       {/* Scrollable content */}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="min-h-0 flex-1">
         <div className="flex w-full min-w-0 flex-col gap-3 overflow-hidden px-2 pb-3">
           <div className="flex items-center justify-between px-2 pt-3">
             <span className="text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
@@ -248,9 +248,11 @@ function PipelineMainView({
                     defaultOpen={defaultOpen}
                     className="group/collapsible flex w-full min-w-0 flex-col gap-0.5"
                   >
-                    <CollapsibleTrigger className="flex w-full min-w-0 items-center gap-1.5 rounded-md px-2 py-1 text-left transition-colors hover:bg-muted/40">
-                      <ChevronRightIcon className="size-3 shrink-0 text-muted-foreground/60 transition-transform duration-150 group-data-[state=open]/collapsible:rotate-90" />
-                      <Icon className="size-3 shrink-0 text-muted-foreground" />
+                    <CollapsibleTrigger className="group/trigger flex w-full min-w-0 items-center gap-1.5 rounded-md px-2 py-1 text-left transition-colors hover:bg-muted/40">
+                      <span className="relative size-3 shrink-0">
+                        <Icon className="absolute inset-0 size-3 text-muted-foreground transition-opacity group-hover/trigger:opacity-0" />
+                        <ChevronRightIcon className="absolute inset-0 size-3 text-muted-foreground opacity-0 transition-all duration-150 group-hover/trigger:opacity-100 group-data-[state=open]/collapsible:rotate-90" />
+                      </span>
                       <span className="flex-1 truncate text-[11px] font-medium text-muted-foreground">
                         {meta.label}
                       </span>
@@ -267,7 +269,7 @@ function PipelineMainView({
                             key={app.id}
                             href={href}
                             className={cn(
-                              "flex min-w-0 items-center overflow-hidden rounded-md py-1.5 pr-2 pl-11 transition-colors",
+                              "flex min-w-0 items-center overflow-hidden rounded-md py-1.5 pr-2 pl-6.5 transition-colors",
                               isActive ? "bg-muted" : "hover:bg-muted/60",
                             )}
                           >
@@ -426,6 +428,7 @@ function SidebarUser({
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="start"
+          alignOffset={8}
           side="top"
           sideOffset={8}
           className="w-72! p-0"
