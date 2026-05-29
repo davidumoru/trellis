@@ -193,6 +193,8 @@ ${parsed.body.slice(0, 2000)}`,
       gmail_labels: parsed.labelIds,
     };
 
+    const cleanSubject = parsed.subject.replace(/^(re|fwd|fw):\s*/i, "").trim();
+
     if (existingConv) {
       const updatedMessages = [...existingConv.messages, newMessage].sort(
         (a, b) => a.sent_at.getTime() - b.sent_at.getTime(),
@@ -213,6 +215,9 @@ ${parsed.body.slice(0, 2000)}`,
             last_message_from: lastMessage.from,
             embedding,
             updated_at: new Date(),
+            ...(cleanSubject && !existingConv.subject
+              ? { subject: cleanSubject }
+              : {}),
           },
         },
       );
@@ -227,6 +232,7 @@ ${parsed.body.slice(0, 2000)}`,
         channel: "email" as const,
         source: "gmail" as const,
         gmail_thread_id: parsed.threadId,
+        subject: cleanSubject || undefined,
         messages: [newMessage],
         last_message_at: parsed.sentAt,
         last_message_from: newMessage.from,

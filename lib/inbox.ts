@@ -110,7 +110,7 @@ function buildThread(
     email,
     company: companyName,
     initials: deriveInitials(name),
-    subject: deriveSubject(firstBody, app),
+    subject: deriveSubject(c.subject, firstBody, app),
     snippet: deriveSnippet(lastBody),
     when: formatRelative(c.last_message_at),
     state: deriveState(
@@ -272,7 +272,12 @@ function deriveInitials(name: string): string {
   return initials || "?";
 }
 
-function deriveSubject(firstBody: string, app: Application | null): string {
+function deriveSubject(
+  stored: string | undefined,
+  firstBody: string,
+  app: Application | null,
+): string {
+  if (stored && stored.trim()) return truncate(stored.trim(), 80);
   if (app?.role_title && app?.jd_structured?.company) {
     return `Re: ${app.role_title} at ${app.jd_structured.company}`;
   }

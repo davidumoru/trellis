@@ -57,6 +57,7 @@ export interface Conversation {
   channel: "email" | "linkedin" | "phone" | "other";
   source?: "gmail" | "manual" | "seed";
   gmail_thread_id?: string;
+  subject?: string;
   messages: Message[];
   last_message_at: Date;
   last_message_from: "me" | "them";
