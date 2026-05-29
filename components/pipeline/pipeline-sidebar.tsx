@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "motion/react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Kbd } from "@/components/ui/kbd";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -91,6 +92,22 @@ const ACTIVE_STATUSES = new Set<Status>([
   "interviewing",
   "offered",
 ]);
+
+const MORE_ITEMS: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  href: string;
+}[] = [
+  { icon: Building2Icon, label: "Companies", href: "/dashboard/companies" },
+  { icon: UserIcon, label: "Contacts", href: "/dashboard/contacts" },
+  { icon: FileTextIcon, label: "Documents", href: "/dashboard/documents" },
+];
+
+function findMoreItem(pathname: string) {
+  return MORE_ITEMS.find(
+    (i) => pathname === i.href || pathname.startsWith(`${i.href}/`),
+  );
+}
 
 type ApplicationListItem = {
   id: string;
@@ -185,6 +202,7 @@ function PipelineMainView({
             href="/dashboard/calendar"
             pathname={pathname}
           />
+          <MoreSlot pathname={pathname} />
           <MoreNav pathname={pathname} />
         </div>
       </div>
@@ -260,7 +278,7 @@ function PipelineMainView({
                         {group.items.length}
                       </span>
                     </CollapsibleTrigger>
-                    <CollapsibleContent className="flex flex-col gap-0.5 overflow-hidden data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0">
+                    <CollapsibleContent className="flex flex-col gap-0.5 overflow-hidden data-[state=closed]:animate-[collapsible-up_220ms_cubic-bezier(0.22,1,0.36,1)] data-[state=open]:animate-[collapsible-down_220ms_cubic-bezier(0.22,1,0.36,1)] motion-reduce:animate-none">
                       {group.items.map((app) => {
                         const href = `/dashboard/${app.id}`;
                         const isActive = pathname === href;
@@ -348,32 +366,60 @@ function NavLink({
   );
 }
 
-function MoreNav({ pathname }: { pathname: string }) {
-  const items = [
-    { icon: Building2Icon, label: "Companies", href: "/dashboard/companies" },
-    { icon: UserIcon, label: "Contacts", href: "/dashboard/contacts" },
-    { icon: FileTextIcon, label: "Documents", href: "/dashboard/documents" },
-  ];
-  const isActive = items.some((i) => pathname === i.href);
+function MoreSlot({ pathname }: { pathname: string }) {
+  const item = findMoreItem(pathname);
+  return (
+    <AnimatePresence>
+      {item && (
+        <motion.div
+          key="slot"
+          initial={{ height: 0, opacity: 0, rotateX: -90 }}
+          animate={{ height: 32, opacity: 1, rotateX: 0 }}
+          exit={{ height: 0, opacity: 0, rotateX: -90 }}
+          transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+          style={{
+            transformOrigin: "top center",
+            transformPerspective: 600,
+          }}
+          className="relative overflow-hidden"
+        >
+          <AnimatePresence initial={false}>
+            <motion.div
+              key={item.href}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.24, ease: "easeOut" }}
+              className="absolute inset-x-0 top-0"
+            >
+              <NavLink
+                icon={item.icon}
+                label={item.label}
+                href={item.href}
+                pathname={pathname}
+              />
+            </motion.div>
+          </AnimatePresence>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
 
+function MoreNav({}: { pathname: string }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className={cn(
-            "group flex h-8 w-full items-center gap-2 rounded-md px-2 text-[13px] transition-colors",
-            isActive
-              ? "bg-muted text-foreground"
-              : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-          )}
+          className="group flex h-8 w-full items-center gap-2 rounded-md px-2 text-[13px] text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
         >
           <MoreHorizontalIcon className="size-3.5" />
           <span className="flex-1 text-left">More</span>
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" side="right" className="min-w-44">
-        {items.map((item) => (
+        {MORE_ITEMS.map((item) => (
           <DropdownMenuItem key={item.href} asChild>
             <Link href={item.href} className="gap-2">
               <item.icon className="size-3.5 text-muted-foreground" />
