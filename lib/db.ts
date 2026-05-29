@@ -7,6 +7,7 @@ import type {
   Contact,
   Conversation,
   Event,
+  GmailRejection,
 } from "./types";
 
 export async function getDb() {
@@ -24,5 +25,6 @@ export async function getCollections() {
     companies: db.collection<Company>("companies"),
     events: db.collection<Event>("events"),
     calendarEvents: db.collection<CalendarEvent>("calendar_events"),
+    gmailRejections: db.collection<GmailRejection>("gmail_rejections"),
   };
 }

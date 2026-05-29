@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
-import { ObjectId } from "mongodb";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { getDb } from "@/lib/db";
 import { syncGmail } from "@/lib/agent/sync";
 import { syncCalendar } from "@/lib/agent/calendar-sync";
+import { getFreshGoogleAccessToken } from "@/lib/google-auth";
 
 export const maxDuration = 300;
 
@@ -17,24 +16,18 @@ export async function POST() {
   }
 
   const userId = session.user.id;
-  const userObjectId = ObjectId.isValid(userId) ? new ObjectId(userId) : userId;
+  const accessToken = await getFreshGoogleAccessToken(userId);
 
-  const db = await getDb();
-  const account = await db.collection("account").findOne({
-    userId: userObjectId as ObjectId,
-    providerId: "google",
-  });
-
-  if (!account?.accessToken) {
+  if (!accessToken) {
     return NextResponse.json(
-      { error: "Google is not connected" },
-      { status: 400 },
+      { error: "Google connection expired. Please reconnect." },
+      { status: 401 },
     );
   }
 
   const [gmail, calendar] = await Promise.allSettled([
-    syncGmail({ accessToken: account.accessToken, userId }),
-    syncCalendar({ accessToken: account.accessToken, userId }),
+    syncGmail({ accessToken, userId }),
+    syncCalendar({ accessToken, userId }),
   ]);
 
   return NextResponse.json({

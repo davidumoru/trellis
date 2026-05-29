@@ -46,6 +46,20 @@ export function SyncBanner() {
       setError(data.error ?? "Sync failed");
       return;
     }
+    const gmailErr = "error" in data.gmail ? data.gmail.error : null;
+    const calErr = "error" in data.calendar ? data.calendar.error : null;
+    if (gmailErr || calErr) {
+      setStatus("error");
+      const isAuth = /401|UNAUTHENTICATED|invalid_grant|expired/i.test(
+        `${gmailErr ?? ""} ${calErr ?? ""}`,
+      );
+      setError(
+        isAuth
+          ? "Google connection expired. Sign out and back in."
+          : "Sync failed",
+      );
+      return;
+    }
     setResult(data);
     setStatus("done");
     router.refresh();

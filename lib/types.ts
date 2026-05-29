@@ -104,6 +104,13 @@ export interface Event {
   created_at: Date;
 }
 
+export interface GmailRejection {
+  _id: ObjectId;
+  user_id: string;
+  gmail_message_id: string;
+  rejected_at: Date;
+}
+
 export interface CalendarEvent {
   _id: ObjectId;
   user_id: string;

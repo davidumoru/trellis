@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
-import { ObjectId } from "mongodb";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { getDb } from "@/lib/db";
 import { syncGmail } from "@/lib/agent/sync";
+import { getFreshGoogleAccessToken } from "@/lib/google-auth";
 
 export const maxDuration = 300;
 
@@ -16,26 +15,17 @@ export async function POST() {
   }
 
   const userId = session.user.id;
-  const userObjectId = ObjectId.isValid(userId) ? new ObjectId(userId) : userId;
+  const accessToken = await getFreshGoogleAccessToken(userId);
 
-  const db = await getDb();
-  const account = await db.collection("account").findOne({
-    userId: userObjectId as ObjectId,
-    providerId: "google",
-  });
-
-  if (!account?.accessToken) {
+  if (!accessToken) {
     return NextResponse.json(
-      { error: "Google is not connected" },
-      { status: 400 },
+      { error: "Google connection expired. Please reconnect." },
+      { status: 401 },
     );
   }
 
   try {
-    const result = await syncGmail({
-      accessToken: account.accessToken,
-      userId,
-    });
+    const result = await syncGmail({ accessToken, userId });
     return NextResponse.json({ ok: true, ...result });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
