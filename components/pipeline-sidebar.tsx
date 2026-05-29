@@ -35,6 +35,9 @@ import {
   SunIcon,
   Code2Icon,
   ArrowUpRightIcon,
+  ShieldCheckIcon,
+  MailIcon,
+  GearIcon,
   HomeIcon,
   InboxIcon,
   CalendarIcon,
@@ -54,6 +57,7 @@ import type { Application } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
 import { Logo } from "@/components/logo";
+import { SettingsSidebar } from "@/components/settings-sidebar";
 
 type Status = Application["status"];
 
@@ -101,7 +105,38 @@ interface PipelineSidebarProps {
 
 type Filter = "active" | "all";
 
-export function PipelineSidebar({
+export function PipelineSidebar(props: PipelineSidebarProps) {
+  const pathname = usePathname();
+  const isSettings = pathname?.startsWith("/dashboard/settings") ?? false;
+
+  return (
+    <div className="h-full overflow-hidden">
+      <div
+        className={cn(
+          "flex h-full w-[200%] transition-transform duration-300 ease-out motion-reduce:transition-none",
+          isSettings ? "-translate-x-1/2" : "translate-x-0",
+        )}
+      >
+        <div
+          aria-hidden={isSettings}
+          className="h-full w-1/2 shrink-0"
+          inert={isSettings ? true : undefined}
+        >
+          <PipelineMainView {...props} />
+        </div>
+        <div
+          aria-hidden={!isSettings}
+          className="h-full w-1/2 shrink-0"
+          inert={!isSettings ? true : undefined}
+        >
+          <SettingsSidebar />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PipelineMainView({
   applications,
   user,
   googleConnected,
@@ -395,8 +430,14 @@ function SidebarUser({
           sideOffset={8}
           className="w-72! p-0"
         >
-          {/* Section: theme */}
+          {/* Section: settings + theme */}
           <div className="p-1">
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard/settings" className="gap-2">
+                <GearIcon className="size-3.5 text-muted-foreground" />
+                <span className="flex-1">Settings</span>
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger className="gap-2">
                 <SunIcon className="size-3.5 text-muted-foreground" />
@@ -428,8 +469,29 @@ function SidebarUser({
 
           <DropdownMenuSeparator className="my-0" />
 
-          {/* Section: external links */}
+          {/* Section: resources & legal */}
           <div className="p-1">
+            <DropdownMenuItem asChild>
+              <Link href="/privacy" className="gap-2">
+                <ShieldCheckIcon className="size-3.5 text-muted-foreground" />
+                <span className="flex-1">Privacy Policy</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/terms" className="gap-2">
+                <FileTextIcon className="size-3.5 text-muted-foreground" />
+                <span className="flex-1">Terms of Service</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <a
+                href="mailto:trellis@davidumoru.me?subject=Trellis%20feedback"
+                className="gap-2"
+              >
+                <MailIcon className="size-3.5 text-muted-foreground" />
+                <span className="flex-1">Send feedback</span>
+              </a>
+            </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <a
                 href="https://github.com/davidumoru/trellis"
@@ -449,8 +511,9 @@ function SidebarUser({
           {/* Section: sign out */}
           <div className="p-1">
             <DropdownMenuItem
+              variant="destructive"
               onClick={handleSignOut}
-              className="gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
+              className="gap-2"
             >
               <LogOutIcon className="size-3.5" />
               Sign out
