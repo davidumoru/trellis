@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { EnvelopeOpen, FunnelSimple } from "@phosphor-icons/react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import type { Thread, ThreadState } from "@/lib/inbox";
@@ -73,11 +74,35 @@ export function InboxList({ threads }: { threads: Thread[] }) {
 
       <ScrollArea className="min-h-0 flex-1">
         {visible.length === 0 ? (
-          <p className="px-6 py-12 text-center text-sm text-muted-foreground">
-            {threads.length === 0
-              ? "No conversations yet. Run a sync to import from Gmail."
-              : "Nothing matches this filter."}
-          </p>
+          threads.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
+              <div className="flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <EnvelopeOpen className="size-5" />
+              </div>
+              <h2 className="font-heading text-base font-medium tracking-tight">
+                Your inbox is empty
+              </h2>
+              <p className="max-w-[16rem] text-xs leading-relaxed text-muted-foreground">
+                Recruiter threads from your connected Gmail will land here. Hit{" "}
+                <span className="font-medium text-foreground">
+                  Sync inbox &amp; calendar
+                </span>{" "}
+                in the sidebar to pull them in.
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
+              <div className="flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <FunnelSimple className="size-5" />
+              </div>
+              <h2 className="font-heading text-base font-medium tracking-tight">
+                Nothing under {FILTER_LABEL[filter]}
+              </h2>
+              <p className="max-w-[16rem] text-xs leading-relaxed text-muted-foreground">
+                Try a different filter — there&rsquo;s nothing here right now.
+              </p>
+            </div>
+          )
         ) : (
           <ul className="flex flex-col border-t border-border">
             {visible.map((t) => {
