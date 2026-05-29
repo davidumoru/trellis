@@ -55,7 +55,7 @@ export function LogoMark({ className }: { className?: string }) {
     <svg
       viewBox="0 0 14 14"
       aria-hidden
-      className={cn("size-4 select-none text-primary", className)}
+      className={cn("size-4 select-none text-foreground", className)}
     >
       <rect width="6.5" height="6.5" rx="1" fill="currentColor" />
       <rect
@@ -90,7 +90,7 @@ export function LogoWordmark({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        "font-heading select-none text-lg font-semibold tracking-tight text-primary",
+        "font-heading select-none text-lg font-semibold tracking-tight text-foreground",
         className,
       )}
     >

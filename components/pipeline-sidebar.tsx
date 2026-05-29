@@ -298,8 +298,8 @@ function SidebarBrand({ onOpenSearch }: { onOpenSearch: () => void }) {
     <div className="flex items-center gap-2 px-2 py-1">
       <Logo
         className="flex-1"
-        markClassName="size-[15px]"
-        wordmarkClassName="text-[17px]"
+        markClassName="size-[13px]"
+        wordmarkClassName="text-[15px]"
       />
       <button
         type="button"
