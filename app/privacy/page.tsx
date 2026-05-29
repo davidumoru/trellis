@@ -28,7 +28,7 @@ export default function PrivacyPage() {
         <Prose>
           <p>
             Trellis (“we”, “us”) is a personal job-search assistant built for
-            the 2026 Google Cloud Agent Hackathon. This policy explains what
+            the 2026 Google Cloud Rapid Agent Hackathon. This policy explains what
             information we collect, how we use it, who we share it with, and the
             rights you have over it. By using Trellis you agree to the practices
             described below.

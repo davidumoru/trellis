@@ -29,7 +29,7 @@ export default function TermsPage() {
           <p>
             These terms (“Terms”) govern your access to and use of Trellis (the
             “Service”), provided as a personal job-search assistant built for
-            the 2026 Google Cloud Agent Hackathon. By creating an account or
+            the 2026 Google Cloud Rapid Agent Hackathon. By creating an account or
             using the Service you agree to these Terms.
           </p>
 
