@@ -101,7 +101,8 @@ function buildThread(
   const messages = mapMessages(c.messages ?? [], c._id.toString());
 
   const firstBody = cleanBody(c.messages?.[0]?.body ?? "");
-  const lastBody = cleanBody(c.messages?.[c.messages.length - 1]?.body ?? "");
+  const lastMessage = c.messages?.[c.messages.length - 1];
+  const lastBody = cleanBody(lastMessage?.body ?? "");
 
   return {
     id: c._id.toString(),
@@ -112,7 +113,12 @@ function buildThread(
     subject: deriveSubject(firstBody, app),
     snippet: deriveSnippet(lastBody),
     when: formatRelative(c.last_message_at),
-    state: deriveState(c.last_message_from, c.last_message_at, email),
+    state: deriveState(
+      c.last_message_from,
+      c.last_message_at,
+      email,
+      lastMessage?.gmail_labels,
+    ),
     messages,
   };
 }
@@ -243,9 +249,13 @@ function deriveState(
   lastFrom: "me" | "them",
   lastAt: Date,
   senderEmail: string,
+  lastLabels: string[] | undefined,
 ): ThreadState {
   if (lastFrom === "me") return "read";
   if (isNoReply(senderEmail)) return "read";
+  if (lastLabels && lastLabels.length > 0) {
+    return lastLabels.includes("UNREAD") ? "unread" : "waiting";
+  }
   return isWithinDays(lastAt, UNREAD_WINDOW_DAYS) ? "unread" : "waiting";
 }
 

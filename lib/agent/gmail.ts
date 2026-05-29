@@ -33,6 +33,7 @@ export interface ParsedEmail {
   body: string;
   sentAt: Date;
   isFromMe: boolean;
+  labelIds: string[];
 }
 
 export async function listRecentMessageIds(
@@ -117,6 +118,7 @@ export function parseMessage(
     body,
     sentAt,
     isFromMe,
+    labelIds: msg.labelIds ?? [],
   };
 }
 

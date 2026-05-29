@@ -15,10 +15,9 @@ import {
   generateEmbedding,
 } from "@/lib/agent/embeddings";
 
-const GMAIL_QUERY =
-  'newer_than:30d category:primary (subject:(interview OR application OR position OR opportunity OR role OR offer OR "thank you for applying") OR from:(greenhouse.io OR lever.co OR ashbyhq.com OR workable.com OR myworkday.com OR linkedin.com))';
+const GMAIL_QUERY = "newer_than:30d category:primary";
 
-const MAX_MESSAGES_PER_SYNC = 60;
+const MAX_MESSAGES_PER_SYNC = 200;
 
 const classificationSchema = z.object({
   is_job_related: z
@@ -103,6 +102,13 @@ export async function syncGmail({
         (m) => m.gmail_message_id === parsed!.messageId,
       )
     ) {
+      await conversations.updateOne(
+        {
+          _id: existingConv._id,
+          "messages.gmail_message_id": parsed.messageId,
+        },
+        { $set: { "messages.$.gmail_labels": parsed.labelIds } },
+      );
       continue;
     }
 
@@ -184,6 +190,7 @@ ${parsed.body.slice(0, 2000)}`,
       body: parsed.body.slice(0, 8000),
       sent_at: parsed.sentAt,
       gmail_message_id: parsed.messageId,
+      gmail_labels: parsed.labelIds,
     };
 
     if (existingConv) {

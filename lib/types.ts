@@ -70,6 +70,7 @@ export interface Message {
   body: string;
   sent_at: Date;
   gmail_message_id?: string;
+  gmail_labels?: string[];
 }
 
 export interface Artifact {
