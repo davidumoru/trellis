@@ -3,7 +3,7 @@ import { SiteHeader } from "@/components/site/site-header";
 import { SiteFooter } from "@/components/site/site-footer";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy - Trellis",
+  title: "Privacy Policy",
   description:
     "How Trellis collects, uses, stores, and protects your data — including Gmail and Google Calendar data accessed under Google API scopes.",
 };

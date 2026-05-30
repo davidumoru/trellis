@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { headers } from "next/headers";
 import Link from "next/link";
@@ -15,6 +16,18 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageBody } from "@/components/message-body";
 import { auth } from "@/lib/auth";
 import { fetchEvent, type EventAttendee } from "@/lib/calendar";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ eventId: string }>;
+}): Promise<Metadata> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return { title: "Calendar" };
+  const { eventId } = await params;
+  const event = await fetchEvent(session.user.id, eventId);
+  return { title: event?.title || "Calendar" };
+}
 
 export default async function EventPage({
   params,

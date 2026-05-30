@@ -1,3 +1,7 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Settings" };
+
 export default function SettingsPage() {
   return (
     <div className="flex flex-col gap-8 px-6 py-8">

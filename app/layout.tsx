@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Trellis",
+  title: { default: "Trellis", template: "%s - Trellis" },
   description: "Your job hunt as a project, not a bookmark folder.",
 };
 

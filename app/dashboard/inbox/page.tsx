@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
 import { EnvelopeOpen as EnvelopeOpenIcon } from "@phosphor-icons/react/dist/ssr";
+
+export const metadata: Metadata = { title: "Inbox" };
 
 export default function InboxIndex() {
   return (

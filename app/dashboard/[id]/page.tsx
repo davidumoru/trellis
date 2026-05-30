@@ -1,9 +1,31 @@
+import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect, notFound } from "next/navigation";
 import { ObjectId } from "mongodb";
 import { getCollections } from "@/lib/db";
 import { ApplicationDetail } from "@/components/pipeline/application-detail";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  if (!ObjectId.isValid(id)) return { title: "Application" };
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return { title: "Application" };
+  const { applications } = await getCollections();
+  const app = await applications.findOne(
+    { _id: new ObjectId(id), user_id: session.user.id },
+    { projection: { role_title: 1, "jd_structured.company": 1 } },
+  );
+  if (!app) return { title: "Application" };
+  const role = app.role_title?.trim();
+  const company = app.jd_structured?.company?.trim();
+  if (role && company) return { title: `${role} at ${company}` };
+  return { title: role || company || "Application" };
+}
 
 export default async function ApplicationDetailPage({
   params,

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -5,6 +6,18 @@ import { ThreadMoreMenu } from "@/components/inbox/thread-more-menu";
 import { MessageBody } from "@/components/message-body";
 import { auth } from "@/lib/auth";
 import { fetchThread } from "@/lib/inbox";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ threadId: string }>;
+}): Promise<Metadata> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return { title: "Inbox" };
+  const { threadId } = await params;
+  const thread = await fetchThread(session.user.id, threadId);
+  return { title: thread?.subject || "Inbox" };
+}
 
 export default async function ThreadPage({
   params,

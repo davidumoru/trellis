@@ -3,7 +3,7 @@ import { SiteHeader } from "@/components/site/site-header";
 import { SiteFooter } from "@/components/site/site-footer";
 
 export const metadata: Metadata = {
-  title: "Terms of Service - Trellis",
+  title: "Terms of Service",
   description:
     "The terms that govern your use of Trellis — including acceptable use, AI-generated content, and disclaimers for a hackathon-stage service.",
 };

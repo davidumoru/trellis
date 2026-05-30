@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
 import { CalendarBlank as CalendarIcon } from "@phosphor-icons/react/dist/ssr";
+
+export const metadata: Metadata = { title: "Calendar" };
 
 export default function CalendarIndex() {
   return (
