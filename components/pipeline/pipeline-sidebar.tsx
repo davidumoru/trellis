@@ -412,7 +412,7 @@ function MoreNav({}: { pathname: string }) {
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="group flex h-8 w-full items-center gap-2 rounded-md px-2 text-[13px] text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+          className="group flex h-8 w-full items-center gap-2 rounded-md px-2 text-[13px] text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:bg-muted/60 focus-visible:text-foreground focus-visible:outline-none"
         >
           <MoreHorizontalIcon className="size-3.5" />
           <span className="flex-1 text-left">More</span>

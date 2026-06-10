@@ -258,7 +258,7 @@ export function CommandPalette({
                     <CommandItem
                       key={c.id}
                       value={value}
-                      onSelect={() => go("/dashboard/contacts")}
+                      onSelect={() => go(`/dashboard/contacts/${c.id}`)}
                       className="h-9 gap-3 px-2"
                     >
                       <Avatar size="sm">
@@ -287,7 +287,7 @@ export function CommandPalette({
                     <CommandItem
                       key={c.id}
                       value={value}
-                      onSelect={() => go("/dashboard/companies")}
+                      onSelect={() => go(`/dashboard/companies/${c.id}`)}
                       className="h-9 gap-3 px-2"
                     >
                       <span
