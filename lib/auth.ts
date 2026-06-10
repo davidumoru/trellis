@@ -34,7 +34,7 @@ export const auth = betterAuth({
       async sendVerificationOTP({ email, otp, type }) {
         if (type === "sign-in") {
           await resend.emails.send({
-            from: "Trellis <onboarding@resend.dev>",
+            from: "Trellis <auth@send.davidumoru.me>",
             to: email,
             subject: "Your sign-in code",
             text: `Use this code to sign in to Trellis: ${otp}\n\nThis code expires in 5 minutes. If you didn't try to sign in, you can ignore this email.`,
