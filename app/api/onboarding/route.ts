@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { getCollections } from "@/lib/db";
-import { ObjectId } from "mongodb";
+import { Binary, ObjectId } from "mongodb";
 import { extractText, getDocumentProxy } from "unpdf";
 
 export async function POST(request: Request) {
@@ -48,16 +48,27 @@ export async function POST(request: Request) {
     );
   }
 
-  const { artifacts } = await getCollections();
+  const { artifacts, files } = await getCollections();
   const userId = session.user.id;
 
+  const artifactId = new ObjectId();
   await artifacts.insertOne({
-    _id: new ObjectId(),
+    _id: artifactId,
     type: "note",
     user_id: userId,
     content_md: resumeText,
     version: 1,
     meta: { kind: "base_resume", name, target_role: targetRole },
+    created_at: new Date(),
+  });
+
+  await files.insertOne({
+    _id: new ObjectId(),
+    user_id: userId,
+    artifact_id: artifactId,
+    filename: file.name || "resume.pdf",
+    content_type: file.type || "application/pdf",
+    data: new Binary(buffer),
     created_at: new Date(),
   });
 

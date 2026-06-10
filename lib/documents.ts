@@ -27,6 +27,7 @@ export interface DocumentDetail {
   version: number;
   createdLabel: string;
   content_md: string;
+  hasFile: boolean;
   application?: { id: string; role_title: string; company: string };
 }
 
@@ -60,7 +61,7 @@ export const fetchDocuments = cache(
 export const fetchDocument = cache(
   async (userId: string, documentId: string): Promise<DocumentDetail | null> => {
     if (!ObjectId.isValid(documentId)) return null;
-    const { artifacts, applications } = await getCollections();
+    const { artifacts, applications, files } = await getCollections();
 
     const doc = await artifacts.findOne({
       _id: new ObjectId(documentId),
@@ -68,12 +69,15 @@ export const fetchDocument = cache(
     });
     if (!doc) return null;
 
-    const app = doc.application_id
-      ? await applications.findOne({
-          _id: doc.application_id,
-          user_id: userId,
-        })
-      : null;
+    const [app, file] = await Promise.all([
+      doc.application_id
+        ? applications.findOne({ _id: doc.application_id, user_id: userId })
+        : null,
+      files.findOne(
+        { artifact_id: doc._id, user_id: userId },
+        { projection: { _id: 1 } },
+      ),
+    ]);
 
     return {
       id: doc._id.toString(),
@@ -83,6 +87,7 @@ export const fetchDocument = cache(
       version: doc.version,
       createdLabel: formatDate(doc.created_at),
       content_md: doc.content_md,
+      hasFile: Boolean(file),
       application: app
         ? {
             id: app._id.toString(),

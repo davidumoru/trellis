@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { headers } from "next/headers";
 import Link from "next/link";
-import { Briefcase as BriefcaseIcon } from "@phosphor-icons/react/dist/ssr";
+import {
+  Briefcase as BriefcaseIcon,
+  DownloadSimple as DownloadIcon,
+} from "@phosphor-icons/react/dist/ssr";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MarkdownProse } from "@/components/markdown-prose";
 import { auth } from "@/lib/auth";
@@ -31,9 +34,24 @@ export default async function DocumentPage({
   const document = await fetchDocument(session.user.id, documentId);
   if (!document) notFound();
 
+  const fileUrl = `/api/documents/${document.id}/file`;
+
   return (
-    <ScrollArea className="h-full">
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-6 py-8">
+    <div className="flex h-full min-w-0 flex-col">
+      {document.hasFile && (
+        <header className="flex shrink-0 items-center justify-end gap-3 border-b border-border px-6 py-3">
+          <a
+            href={`${fileUrl}?download`}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-foreground px-3 py-1 text-xs font-medium text-background transition-opacity hover:opacity-90"
+          >
+            <DownloadIcon className="size-3.5" weight="fill" />
+            Download PDF
+          </a>
+        </header>
+      )}
+
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-6 py-8">
         <header className="flex flex-col gap-3">
           <h1 className="font-heading text-2xl font-medium tracking-tight">
             {document.title}
@@ -65,8 +83,17 @@ export default async function DocumentPage({
           )}
         </header>
 
-        <MarkdownProse content={document.content_md} />
-      </div>
-    </ScrollArea>
+          {document.hasFile ? (
+            <iframe
+              src={fileUrl}
+              title={document.title}
+              className="h-[75vh] w-full rounded-lg border border-border bg-muted"
+            />
+          ) : (
+            <MarkdownProse content={document.content_md} />
+          )}
+        </div>
+      </ScrollArea>
+    </div>
   );
 }

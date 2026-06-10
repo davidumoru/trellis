@@ -1,4 +1,4 @@
-import { ObjectId } from "mongodb";
+import { Binary, ObjectId } from "mongodb";
 
 export interface Application {
   _id: ObjectId;
@@ -83,6 +83,16 @@ export interface Artifact {
   version: number;
   meta?: Record<string, unknown>;
   embedding?: number[];
+  created_at: Date;
+}
+
+export interface StoredFile {
+  _id: ObjectId;
+  user_id: string;
+  artifact_id: ObjectId;
+  filename: string;
+  content_type: string;
+  data: Binary;
   created_at: Date;
 }
 
