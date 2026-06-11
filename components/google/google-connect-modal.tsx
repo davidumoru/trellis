@@ -46,12 +46,6 @@ export function GoogleConnectModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md gap-0 p-0" showCloseButton={false}>
         <div className="flex flex-col gap-5 px-6 pt-6 pb-5">
-          <div
-            aria-hidden
-            className="flex size-9 items-center justify-center rounded-full bg-primary/10"
-          >
-            <SparklesIcon className="size-4 text-primary" />
-          </div>
           <div className="flex flex-col gap-1">
             <DialogTitle className="text-base font-semibold leading-tight">
               Want Trellis to catch the recruiter emails for you?
