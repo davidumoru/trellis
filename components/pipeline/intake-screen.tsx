@@ -10,10 +10,18 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { TextShimmer } from "@/components/agent/text-shimmer";
 import { MarkdownProse } from "@/components/markdown-prose";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   CheckIcon,
   XCircleIcon,
   ArrowUpIcon,
   FileSearchIcon,
+  SparklesIcon,
+  SearchIcon,
+  SendIcon,
 } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import type { IntakeEvent, PlanStep } from "@/lib/agent/intake";
@@ -194,12 +202,28 @@ export function IntakeScreen() {
                 rows={3}
                 className="min-h-20 resize-none border-0 bg-transparent p-2 text-base shadow-none focus-visible:ring-0 dark:bg-transparent"
               />
-              <div className="flex items-center justify-end pt-2">
+              <div className="flex items-end justify-between gap-3 pt-2">
+                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                  <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-foreground">
+                    <SparklesIcon className="size-3" />
+                    Tailor &amp; track
+                  </span>
+                  <SoonChip
+                    icon={SearchIcon}
+                    label="Find jobs"
+                    description="Trellis will scout postings that match your profile and queue the best ones here."
+                  />
+                  <SoonChip
+                    icon={SendIcon}
+                    label="Auto-apply"
+                    description="Trellis will submit tailored applications for roles you approve, hands-off."
+                  />
+                </div>
                 <Button
                   type="submit"
                   size="icon-sm"
                   disabled={!url}
-                  className="rounded-full"
+                  className="shrink-0 rounded-full"
                   aria-label="Run intake"
                 >
                   <ArrowUpIcon />
@@ -469,6 +493,43 @@ function StepGlyph({ status }: { status: StepStatus }) {
     return <XCircleIcon className="size-4 text-destructive" />;
   }
   return <span className="size-1.25 rounded-full bg-muted-foreground/40" />;
+}
+
+function SoonChip({
+  icon: Icon,
+  label,
+  description,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  description: string;
+}) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:bg-muted/60 focus-visible:text-foreground focus-visible:outline-none data-[state=open]:bg-muted/60 data-[state=open]:text-foreground"
+        >
+          <Icon className="size-3" />
+          {label}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent side="top" align="start" className="w-64 p-3">
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm font-medium">{label}</span>
+            <span className="inline-flex items-center rounded-full bg-amber-500/15 px-1.5 py-px text-[10px] font-medium text-amber-700 dark:text-amber-300">
+              Coming soon
+            </span>
+          </div>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {description}
+          </p>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 function hostLabel(url: string): string {
