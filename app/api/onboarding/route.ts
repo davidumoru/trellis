@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   let resumeText: string;
 
   try {
-    const pdf = await getDocumentProxy(buffer);
+    const pdf = await getDocumentProxy(buffer.slice());
     const { text } = await extractText(pdf, { mergePages: true });
     resumeText = (text as string).trim();
   } catch (e) {
