@@ -7,9 +7,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { TextShimmer } from "@/components/agent/text-shimmer";
+import { MarkdownProse } from "@/components/markdown-prose";
 import {
   CheckIcon,
-  CircleIcon,
   XCircleIcon,
   ArrowUpIcon,
   FileSearchIcon,
@@ -17,8 +18,10 @@ import {
 import { cn } from "@/lib/utils";
 import type { IntakeEvent, PlanStep } from "@/lib/agent/intake";
 
+type StepStatus = "pending" | "running" | "done" | "error";
+
 type PlanStepWithStatus = PlanStep & {
-  status: "pending" | "running" | "done" | "error";
+  status: StepStatus;
   error?: string;
 };
 
@@ -164,9 +167,15 @@ export function IntakeScreen() {
     return (
       <div className="flex h-full flex-col items-center justify-center px-6">
         <div className="flex w-full max-w-2xl flex-col gap-8">
-          <h1 className="text-center text-2xl font-semibold tracking-tight">
-            What job are you applying for?
-          </h1>
+          <div className="flex flex-col items-center gap-2">
+            <h1 className="text-center font-heading text-2xl font-medium tracking-tight">
+              What job are you applying for?
+            </h1>
+            <p className="text-center text-sm text-muted-foreground">
+              Paste a posting URL. Trellis reads it, tailors your resume, and
+              drafts the cover letter for your review.
+            </p>
+          </div>
 
           <form onSubmit={handleStart}>
             <div className="rounded-2xl border bg-card p-3 shadow-sm transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/30">
@@ -203,195 +212,269 @@ export function IntakeScreen() {
     );
   }
 
+  const jd = (results.parse_jd as ParsedJd | undefined) ?? null;
+  const metaParts = jd
+    ? [jd.company, jd.location, jd.remote_policy, jd.comp_band].filter(Boolean)
+    : [];
+
   return (
-    <ScrollArea className="h-full">
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-6 py-8">
-        <header className="flex flex-col gap-1">
-          <p className="text-xs text-muted-foreground">{url}</p>
-          <h1 className="text-lg font-semibold">
-            {phase === "running"
-              ? "Running intake…"
-              : phase === "review"
-                ? "Review & approve"
-                : phase === "saving"
-                  ? "Saving…"
-                  : phase === "not_a_job"
-                    ? "Not a job posting"
-                    : "Something went wrong"}
-          </h1>
-        </header>
+    <div className="flex h-full min-w-0 flex-col">
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="mx-auto flex w-full max-w-2xl flex-col px-6 py-10">
+          <header className="flex flex-col gap-1.5 pb-10">
+            <p className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
+              Intake · {hostLabel(url)}
+            </p>
+            <h1 className="font-heading text-2xl font-medium tracking-tight">
+              {phase === "not_a_job" ? (
+                "Not a job posting"
+              ) : jd ? (
+                jd.role
+              ) : phase === "running" ? (
+                <TextShimmer>Reading the posting</TextShimmer>
+              ) : (
+                "New application"
+              )}
+            </h1>
+            {metaParts.length > 0 && (
+              <p className="text-sm text-muted-foreground">
+                {metaParts.join(" · ")}
+              </p>
+            )}
+          </header>
 
-        <PlanList plan={plan} />
+          <Timeline plan={plan} results={results} />
 
-        {phase === "not_a_job" && notAJob && (
-          <div className="flex flex-col items-center gap-3 rounded-lg border bg-card px-6 py-8 text-center">
-            <div className="flex size-10 items-center justify-center rounded-full bg-muted">
-              <FileSearchIcon className="size-5 text-muted-foreground" />
+          {phase === "not_a_job" && notAJob && (
+            <div className="flex flex-col items-center gap-3 py-14 text-center">
+              <div className="flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <FileSearchIcon className="size-5" />
+              </div>
+              <h2 className="font-heading text-base font-medium tracking-tight">
+                This page isn&apos;t a job description
+              </h2>
+              <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
+                {notAJob.reason}
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleReset}
+                className="mt-2"
+              >
+                Try a different URL
+              </Button>
             </div>
-            <p className="text-sm font-medium">{notAJob.reason}</p>
-            <Button variant="outline" onClick={handleReset}>
-              Try a different URL
-            </Button>
-          </div>
-        )}
+          )}
 
-        {globalError && phase === "error" && (
-          <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-            {globalError}
-          </div>
-        )}
+          {phase === "error" && globalError && (
+            <div className="mt-8 flex items-center justify-between gap-4 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3">
+              <p className="min-w-0 text-sm text-destructive">{globalError}</p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleReset}
+                className="shrink-0"
+              >
+                Try again
+              </Button>
+            </div>
+          )}
 
-        {results.parse_jd ? (
-          <JdSummary jd={results.parse_jd as ParsedJd} />
-        ) : null}
-
-        {results.tailor_resume ? (
-          <ArtifactCard
-            title="Resume tailoring"
-            content={(results.tailor_resume as { content: string }).content}
-          />
-        ) : null}
-
-        {results.draft_cover_letter ? (
-          <ArtifactCard
-            title="Cover letter draft"
-            content={
-              (results.draft_cover_letter as { content: string }).content
-            }
-          />
-        ) : null}
-
-        {phase === "review" && intakeData && (
-          <div className="sticky bottom-0 -mx-6 flex items-center justify-end gap-2 border-t bg-background/80 px-6 py-3 backdrop-blur">
-            <Button variant="ghost" onClick={handleReset}>
-              Start over
-            </Button>
-            <Button onClick={handleApprove}>Approve & save</Button>
-          </div>
-        )}
-
-        {phase === "saving" && (
-          <div className="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground">
-            <Spinner /> Saving application…
-          </div>
-        )}
-
-        {phase === "error" && (
-          <div className="flex justify-end">
-            <Button variant="outline" onClick={handleReset}>
-              Try again
-            </Button>
-          </div>
-        )}
-      </div>
-    </ScrollArea>
+          {(phase === "review" || phase === "saving") && intakeData && (
+            <div className="sticky bottom-6 mt-12 flex items-center justify-between gap-3 rounded-xl border border-border bg-background/80 px-4 py-3 shadow-lg backdrop-blur">
+              {phase === "saving" ? (
+                <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                  <Spinner className="size-3.5" />
+                  Saving application…
+                </span>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Save this application to your pipeline?
+                </p>
+              )}
+              <div className="flex shrink-0 items-center gap-2">
+                <Button
+                  variant="ghost"
+                  onClick={handleReset}
+                  disabled={phase === "saving"}
+                >
+                  Start over
+                </Button>
+                <Button onClick={handleApprove} disabled={phase === "saving"}>
+                  Approve &amp; save
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+    </div>
   );
 }
 
-function PlanList({ plan }: { plan: PlanStepWithStatus[] }) {
+function Timeline({
+  plan,
+  results,
+}: {
+  plan: PlanStepWithStatus[];
+  results: Record<string, unknown>;
+}) {
   if (plan.length === 0) {
     return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Spinner />
-        Planning…
+      <div className="flex items-center gap-3 text-sm">
+        <span className="flex w-5 justify-center">
+          <Spinner className="size-3.5" />
+        </span>
+        <TextShimmer>Planning the run</TextShimmer>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border bg-card p-3">
-      <p className="px-1 text-xs font-medium text-muted-foreground">
-        Agent plan
-      </p>
-      <ol className="flex flex-col">
-        {plan.map((step) => (
-          <li
-            key={step.id}
-            className="flex items-center gap-3 rounded-md px-1 py-1.5 text-sm"
-          >
-            <StepIcon status={step.status} />
-            <span
+    <ol className="flex flex-col">
+      {plan.map((step, i) => {
+        const last = i === plan.length - 1;
+        const artifact = stepArtifact(step.id, results);
+        return (
+          <li key={step.id} className="flex gap-3.5">
+            <div className="flex w-5 shrink-0 flex-col items-center">
+              <span className="flex h-6 items-center">
+                <StepGlyph status={step.status} />
+              </span>
+              {!last && <span className="mt-1 w-px flex-1 bg-border" />}
+            </div>
+            <div
               className={cn(
-                step.status === "done" && "text-muted-foreground",
-                step.status === "error" && "text-destructive",
+                "flex min-w-0 flex-1 flex-col",
+                last ? "pb-0" : "pb-8",
               )}
             >
-              {step.label}
-            </span>
-            {step.status === "error" && step.error && (
-              <span className="ml-auto truncate text-xs text-destructive">
-                {step.error}
+              <span
+                className={cn(
+                  "flex h-6 items-center text-sm",
+                  step.status === "pending" && "text-muted-foreground/50",
+                  step.status === "done" && "text-muted-foreground",
+                  step.status === "error" && "text-destructive",
+                )}
+              >
+                {step.status === "running" ? (
+                  <TextShimmer>{step.label}</TextShimmer>
+                ) : (
+                  step.label
+                )}
               </span>
-            )}
+              {step.status === "error" && step.error && (
+                <p className="mt-1 text-xs text-destructive/80">{step.error}</p>
+              )}
+              {artifact && (
+                <div className="mt-4 animate-in fade-in slide-in-from-bottom-2 duration-300 motion-reduce:animate-none">
+                  {artifact}
+                </div>
+              )}
+            </div>
           </li>
-        ))}
-      </ol>
-    </div>
+        );
+      })}
+    </ol>
   );
 }
 
-function StepIcon({ status }: { status: PlanStepWithStatus["status"] }) {
-  if (status === "done") {
-    return <CheckIcon className="size-4 text-foreground" />;
+function stepArtifact(
+  stepId: string,
+  results: Record<string, unknown>,
+): React.ReactNode {
+  if (stepId === "parse_jd" && results.parse_jd) {
+    return <JdDetails jd={results.parse_jd as ParsedJd} />;
   }
-  if (status === "running") {
-    return <Spinner className="size-4" />;
+  if (stepId === "tailor_resume" && results.tailor_resume) {
+    return (
+      <Artifact
+        title="Proposed resume changes"
+        content={(results.tailor_resume as { content: string }).content}
+      />
+    );
   }
-  if (status === "error") {
-    return <XCircleIcon className="size-4 text-destructive" />;
+  if (stepId === "draft_cover_letter" && results.draft_cover_letter) {
+    return (
+      <Artifact
+        title="Cover letter draft"
+        content={(results.draft_cover_letter as { content: string }).content}
+      />
+    );
   }
-  return <CircleIcon className="size-4 text-muted-foreground/60" />;
+  return null;
 }
 
-function JdSummary({ jd }: { jd: ParsedJd }) {
+function JdDetails({ jd }: { jd: ParsedJd }) {
+  if (jd.stack.length === 0 && jd.requirements.length === 0) return null;
   return (
-    <div className="flex flex-col gap-3 rounded-lg border bg-card p-4">
-      <div className="flex flex-col gap-1">
-        <p className="text-xs font-medium text-muted-foreground">Job</p>
-        <h3 className="text-base font-semibold">{jd.role}</h3>
-        <p className="text-sm text-muted-foreground">
-          {jd.company} · {jd.location}
-          {jd.remote_policy ? ` · ${jd.remote_policy}` : ""}
-          {jd.comp_band ? ` · ${jd.comp_band}` : ""}
-        </p>
-      </div>
+    <div className="flex flex-col gap-6">
       {jd.stack.length > 0 && (
-        <div className="flex flex-col gap-1.5">
-          <p className="text-xs font-medium text-muted-foreground">Stack</p>
-          <div className="flex flex-wrap gap-1">
+        <section className="flex flex-col gap-2">
+          <h3 className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
+            Stack
+          </h3>
+          <div className="flex flex-wrap gap-1.5">
             {jd.stack.map((s) => (
-              <Badge key={s} variant="secondary">
+              <Badge key={s} variant="outline">
                 {s}
               </Badge>
             ))}
           </div>
-        </div>
+        </section>
       )}
       {jd.requirements.length > 0 && (
-        <div className="flex flex-col gap-1.5">
-          <p className="text-xs font-medium text-muted-foreground">
+        <section className="flex flex-col gap-2">
+          <h3 className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
             Requirements
-          </p>
-          <ul className="flex flex-col gap-1 text-sm">
+          </h3>
+          <ul className="flex flex-col gap-1.5 text-sm">
             {jd.requirements.map((r, i) => (
-              <li key={i} className="text-foreground">
-                · {r}
+              <li key={i} className="flex gap-2.5">
+                <span className="mt-2 size-1 shrink-0 rounded-full bg-muted-foreground/40" />
+                <span className="text-foreground/90">{r}</span>
               </li>
             ))}
           </ul>
-        </div>
+        </section>
       )}
     </div>
   );
 }
 
-function ArtifactCard({ title, content }: { title: string; content: string }) {
+function Artifact({ title, content }: { title: string; content: string }) {
   return (
-    <div className="flex flex-col gap-2 rounded-lg border bg-card p-4">
-      <p className="text-xs font-medium text-muted-foreground">{title}</p>
-      <pre className="font-sans text-sm whitespace-pre-wrap text-foreground">
-        {content}
-      </pre>
-    </div>
+    <section className="flex flex-col gap-3">
+      <h3 className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
+        {title}
+      </h3>
+      <MarkdownProse content={content} />
+    </section>
   );
+}
+
+function StepGlyph({ status }: { status: StepStatus }) {
+  if (status === "done") {
+    return (
+      <span className="flex size-4 items-center justify-center rounded-full bg-foreground">
+        <CheckIcon className="size-2.5 text-background" weight="bold" />
+      </span>
+    );
+  }
+  if (status === "running") {
+    return <Spinner className="size-3.5 text-foreground" />;
+  }
+  if (status === "error") {
+    return <XCircleIcon className="size-4 text-destructive" />;
+  }
+  return <span className="size-1.25 rounded-full bg-muted-foreground/40" />;
+}
+
+function hostLabel(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url.length > 48 ? `${url.slice(0, 48)}…` : url;
+  }
 }

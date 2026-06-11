@@ -1,12 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { MarkdownProse } from "@/components/markdown-prose";
 import { ArrowUpRightIcon } from "@/lib/icons";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -17,6 +13,16 @@ const STATUS_LABELS: Record<string, string> = {
   offered: "Offered",
   rejected: "Rejected",
   withdrawn: "Withdrawn",
+};
+
+const STATUS_PILL: Record<string, string> = {
+  bookmarked: "bg-muted text-muted-foreground",
+  applying: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+  applied: "bg-muted text-foreground/80",
+  interviewing: "bg-violet-500/15 text-violet-700 dark:text-violet-300",
+  offered: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
+  rejected: "bg-destructive/10 text-destructive",
+  withdrawn: "bg-muted text-muted-foreground",
 };
 
 interface ApplicationDetailProps {
@@ -77,15 +83,17 @@ export function ApplicationDetail({
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-6 py-10">
         <header className="flex flex-col gap-2">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Badge variant="secondary" className="text-[10px]">
+            <span
+              className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${STATUS_PILL[application.status] ?? "bg-muted text-muted-foreground"}`}
+            >
               {STATUS_LABELS[application.status] ?? application.status}
-            </Badge>
+            </span>
             <span>·</span>
             <span>
               Added {new Date(application.created_at).toLocaleDateString()}
             </span>
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <h1 className="font-heading text-2xl font-medium tracking-tight">
             {application.role_title}
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -151,7 +159,9 @@ export function ApplicationDetail({
                       {hiringManager.last_contact_at && (
                         <>
                           {" · Last contact "}
-                          {relativeTime(new Date(hiringManager.last_contact_at))}
+                          {relativeTime(
+                            new Date(hiringManager.last_contact_at),
+                          )}
                         </>
                       )}
                     </span>
@@ -218,17 +228,17 @@ export function ApplicationDetail({
               <div className="flex flex-col gap-10">
                 {resumeDiff && (
                   <Section title="Tailored resume">
-                    <Prose content={resumeDiff} />
+                    <MarkdownProse content={resumeDiff} />
                   </Section>
                 )}
                 {coverLetter && (
                   <Section title="Cover letter">
-                    <Prose content={coverLetter} />
+                    <MarkdownProse content={coverLetter} />
                   </Section>
                 )}
                 {researchNote && (
                   <Section title="Company research">
-                    <Prose content={researchNote} />
+                    <MarkdownProse content={researchNote} />
                   </Section>
                 )}
               </div>
@@ -283,18 +293,8 @@ function Message({
             {relativeTime(new Date(sent_at))}
           </span>
         </div>
-        <p className="text-sm whitespace-pre-wrap text-foreground/90">
-          {body}
-        </p>
+        <p className="text-sm whitespace-pre-wrap text-foreground/90">{body}</p>
       </div>
-    </div>
-  );
-}
-
-function Prose({ content }: { content: string }) {
-  return (
-    <div className="text-sm leading-relaxed whitespace-pre-wrap text-foreground/90">
-      {content}
     </div>
   );
 }

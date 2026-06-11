@@ -5,7 +5,8 @@ import type { Application, Artifact } from "@/lib/types";
 import { GROUP_LABEL, type DocumentGroup } from "@/lib/documents-meta";
 
 const TYPE_TITLE: Record<Artifact["type"], string> = {
-  resume_diff: "Tailored resume",
+  resume_diff: "Resume changes",
+  tailored_resume: "Tailored resume",
   cover_letter: "Cover letter",
   research_note: "Company research",
   note: "Note",
@@ -21,6 +22,7 @@ export interface DocumentListItem {
 
 export interface DocumentDetail {
   id: string;
+  type: Artifact["type"];
   group: DocumentGroup;
   title: string;
   typeLabel: string;
@@ -28,6 +30,7 @@ export interface DocumentDetail {
   createdLabel: string;
   content_md: string;
   hasFile: boolean;
+  finalResumeId: string | null;
   application?: { id: string; role_title: string; company: string };
 }
 
@@ -59,7 +62,10 @@ export const fetchDocuments = cache(
 );
 
 export const fetchDocument = cache(
-  async (userId: string, documentId: string): Promise<DocumentDetail | null> => {
+  async (
+    userId: string,
+    documentId: string,
+  ): Promise<DocumentDetail | null> => {
     if (!ObjectId.isValid(documentId)) return null;
     const { artifacts, applications, files } = await getCollections();
 
@@ -69,7 +75,7 @@ export const fetchDocument = cache(
     });
     if (!doc) return null;
 
-    const [app, file] = await Promise.all([
+    const [app, file, finalResume] = await Promise.all([
       doc.application_id
         ? applications.findOne({ _id: doc.application_id, user_id: userId })
         : null,
@@ -77,10 +83,21 @@ export const fetchDocument = cache(
         { artifact_id: doc._id, user_id: userId },
         { projection: { _id: 1 } },
       ),
+      doc.type === "resume_diff"
+        ? artifacts.findOne(
+            {
+              user_id: userId,
+              type: "tailored_resume",
+              "meta.source_diff_id": doc._id.toString(),
+            },
+            { projection: { _id: 1 } },
+          )
+        : null,
     ]);
 
     return {
       id: doc._id.toString(),
+      type: doc.type,
       group: groupOf(doc),
       title: titleOf(doc, app?.jd_structured?.company),
       typeLabel: typeLabelOf(doc),
@@ -88,6 +105,7 @@ export const fetchDocument = cache(
       createdLabel: formatDate(doc.created_at),
       content_md: doc.content_md,
       hasFile: Boolean(file),
+      finalResumeId: finalResume?._id.toString() ?? null,
       application: app
         ? {
             id: app._id.toString(),
@@ -128,13 +146,16 @@ function isBaseResume(d: Artifact): boolean {
 }
 
 function groupOf(d: Artifact): DocumentGroup {
-  return isBaseResume(d) ? "base_resume" : d.type;
+  if (isBaseResume(d)) return "base_resume";
+  if (d.type === "tailored_resume") return "resume_diff";
+  return d.type;
 }
 
 function titleOf(d: Artifact, company?: string): string {
   if (isBaseResume(d)) return "Base resume";
   if (!company) return TYPE_TITLE[d.type];
-  if (d.type === "resume_diff") return `${company} resume`;
+  if (d.type === "resume_diff") return `${company} resume changes`;
+  if (d.type === "tailored_resume") return `${company} resume`;
   if (d.type === "cover_letter") return `${company} cover letter`;
   if (d.type === "research_note") return `${company} research`;
   return TYPE_TITLE[d.type];

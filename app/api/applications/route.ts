@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { getCollections } from "@/lib/db";
@@ -8,6 +8,7 @@ import {
   applicationEmbeddingText,
   artifactEmbeddingText,
 } from "@/lib/agent/embeddings";
+import { finalizeResume } from "@/lib/agent/finalize";
 
 export const maxDuration = 60;
 
@@ -108,6 +109,15 @@ export async function POST(request: Request) {
   await applications.insertOne({
     ...applicationDoc,
     embedding: appEmbedding,
+  });
+
+  after(async () => {
+    const result = await finalizeResume(userId, resumeArtifactId.toString());
+    if (!result.ok) {
+      console.error(
+        `Auto-finalize failed for ${resumeArtifactId}: ${result.error}`,
+      );
+    }
   });
 
   return NextResponse.json({ id: applicationId.toString() });

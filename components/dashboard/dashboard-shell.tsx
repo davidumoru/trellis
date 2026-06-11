@@ -57,7 +57,8 @@ export function DashboardShell({
 }: DashboardShellProps) {
   const isMobile = useIsMobile();
   const pathname = usePathname();
-  const showAgent = !pathname?.startsWith("/dashboard/settings");
+  const showAgent =
+    pathname !== "/dashboard" && !pathname?.startsWith("/dashboard/settings");
   const [paletteOpen, setPaletteOpen] = useState(false);
   useCommandPaletteShortcut(setPaletteOpen);
 
